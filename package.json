@@ -1,0 +1,31 @@
+{
+  "name": "turbo-stream",
+  "version": "0.0.1",
+  "description": "A streaming data transport format that aims to support built-in features such as Promises, Dates, RegExps, Maps, Sets and more.",
+  "type": "module",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/turbo-stream.d.ts",
+      "default": "./dist/turbo-stream.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsc --outDir dist --project tsconfig.lib.json",
+    "test": "node --no-warnings --loader tsm --enable-source-maps --test-reporter tap --test src/*.spec.ts",
+    "test-typecheck": "tsc --noEmit --project tsconfig.spec.json"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^20.8.7",
+    "expect": "^29.7.0",
+    "tsm": "^2.3.0",
+    "typescript": "^5.2.2"
+  }
+}
