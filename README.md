@@ -24,3 +24,5 @@ console.log(decoded.value); // a Promise
 console.log(await decoded.value); // 42
 await decoded.done; // wait for the stream to finish
 ```
+
+Stackblitz: https://stackblitz.com/edit/stackblitz-starters-2wm7dh?file=index.js
