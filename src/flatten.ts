@@ -16,9 +16,8 @@ import {
 } from "./utils.js";
 
 export function flatten(this: ThisEncode, input: unknown): number {
-  if (this.indicies.has(input)) {
-    return this.indicies.get(input)!;
-  }
+  const existing = this.indicies.get(input);
+  if (existing) return existing;
 
   if (input === undefined) return UNDEFINED;
   if (Number.isNaN(input)) return NAN;
@@ -29,19 +28,20 @@ export function flatten(this: ThisEncode, input: unknown): number {
   const index = this.index++;
   this.indicies.set(input, index);
   stringify.call(this, input, index);
-
   return index;
 }
 
 function stringify(this: ThisEncode, input: unknown, index: number) {
+  const str = this.stringified;
+
   switch (typeof input) {
     case "boolean":
     case "number":
     case "string":
-      this.stringified[index] = JSON.stringify(input);
+      str[index] = JSON.stringify(input);
       break;
     case "bigint":
-      this.stringified[index] = `["${TYPE_BIGINT}","${input}"]`;
+      str[index] = `["${TYPE_BIGINT}","${input}"]`;
       break;
     case "symbol":
       const keyFor = Symbol.keyFor(input);
@@ -49,82 +49,50 @@ function stringify(this: ThisEncode, input: unknown, index: number) {
         throw new Error(
           "Cannot encode symbol unless created with Symbol.for()"
         );
-      this.stringified[index] = `["${TYPE_SYMBOL}",${JSON.stringify(keyFor)}]`;
+      str[index] = `["${TYPE_SYMBOL}",${JSON.stringify(keyFor)}]`;
       break;
     case "object":
       if (!input) {
-        this.stringified[index] = "null";
+        str[index] = "null";
         break;
       }
 
+      let result = Array.isArray(input) ? "[" : "{";
       if (Array.isArray(input)) {
-        let result = "[";
-        for (let i = 0; i < input.length; i++) {
-          if (i > 0) result += ",";
-          if (i in input) {
-            result += flatten.call(this, input[i]);
-          } else {
-            result += HOLE;
-          }
-        }
-        this.stringified[index] = result + "]";
-        break;
-      }
-
-      if (input instanceof Date) {
-        this.stringified[index] = `["${TYPE_DATE}",${input.getTime()}]`;
-        break;
-      }
-
-      if (input instanceof RegExp) {
-        this.stringified[index] = `["${TYPE_REGEXP}",${JSON.stringify(
+        for (let i = 0; i < input.length; i++)
+          result +=
+            (i ? "," : "") + (i in input ? flatten.call(this, input[i]) : HOLE);
+        str[index] = result + "]";
+      } else if (input instanceof Date) {
+        str[index] = `["${TYPE_DATE}",${input.getTime()}]`;
+      } else if (input instanceof RegExp) {
+        str[index] = `["${TYPE_REGEXP}",${JSON.stringify(
           input.source
         )},${JSON.stringify(input.flags)}]`;
-        break;
-      }
-
-      if (input instanceof Set) {
-        let result = `["${TYPE_SET}"`;
-        for (const value of input) {
-          result += "," + flatten.call(this, value);
-        }
-        this.stringified[index] = result + "]";
-        break;
-      }
-
-      if (input instanceof Map) {
-        let result = `["${TYPE_MAP}"`;
-        for (const [key, value] of input) {
-          result += "," + flatten.call(this, key);
-          result += "," + flatten.call(this, value);
-        }
-        this.stringified[index] = result + "]";
-        break;
-      }
-
-      if (input instanceof Promise) {
-        this.stringified[index] = `["${TYPE_PROMISE}",${index}]`;
+      } else if (input instanceof Set) {
+        str[index] = `["${TYPE_SET}",${[...input]
+          .map((val) => flatten.call(this, val))
+          .join(",")}]`;
+      } else if (input instanceof Map) {
+        str[index] = `["${TYPE_MAP}",${[...input]
+          .flatMap(([k, v]) => [flatten.call(this, k), flatten.call(this, v)])
+          .join(",")}]`;
+      } else if (input instanceof Promise) {
+        str[index] = `["${TYPE_PROMISE}",${index}]`;
         this.deferred[index] = input;
-        break;
-      }
-
-      if (!isPlainObject(input)) {
+      } else if (isPlainObject(input)) {
+        const parts = [];
+        for (const key in input)
+          parts.push(
+            `${JSON.stringify(key)}:${flatten.call(this, input[key])}`
+          );
+        str[index] = "{" + parts.join(",") + "}";
+      } else {
         throw new Error("Cannot encode object with prototype");
       }
-
-      let result = "{";
-      let sep = false;
-      for (const key in input) {
-        if (sep) result += ",";
-        sep = true;
-        result += JSON.stringify(key) + ":" + flatten.call(this, input[key]);
-      }
-      this.stringified[index] = result + "}";
       break;
-    case "function":
-      throw new Error("Cannot encode function");
-    case "undefined":
-      throw new Error("This should never happen");
+    default:
+      throw new Error("Cannot encode function or unexpected type");
   }
 }
 
@@ -136,7 +104,6 @@ function isPlainObject(
   thing: unknown
 ): thing is Record<string | number | symbol, unknown> {
   const proto = Object.getPrototypeOf(thing);
-
   return (
     proto === Object.prototype ||
     proto === null ||

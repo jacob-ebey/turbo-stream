@@ -17,11 +17,9 @@ import {
 } from "./utils.js";
 
 export function unflatten(this: ThisDecode, parsed: unknown): unknown {
-  if (typeof parsed === "number") return hydrate.call(this, parsed, true);
+  if (typeof parsed === "number") return hydrate.call(this, parsed);
 
-  if (!Array.isArray(parsed) || parsed.length === 0) {
-    throw new Error("Invalid input");
-  }
+  if (!Array.isArray(parsed) || !parsed.length) throw new SyntaxError();
 
   const startIndex = this.values.length;
   this.values.push(...parsed);
@@ -30,84 +28,81 @@ export function unflatten(this: ThisDecode, parsed: unknown): unknown {
   return hydrate.call(this, startIndex);
 }
 
-function hydrate(this: ThisDecode, index: number, standalone?: true) {
-  if (index === UNDEFINED) return undefined;
-  if (index === NAN) return NaN;
-  if (index === POSITIVE_INFINITY) return Infinity;
-  if (index === NEGATIVE_INFINITY) return -Infinity;
-  if (index === NEGATIVE_ZERO) return -0;
+function hydrate(this: ThisDecode, index: number) {
+  const { hydrated, values, deferred } = this;
 
-  if (standalone) throw new Error(`Invalid input`);
+  switch (index) {
+    case UNDEFINED:
+      return;
+    case NAN:
+      return NaN;
+    case POSITIVE_INFINITY:
+      return Infinity;
+    case NEGATIVE_INFINITY:
+      return -Infinity;
+    case NEGATIVE_ZERO:
+      return -0;
+  }
 
-  if (index in this.hydrated) return this.hydrated[index];
+  if (hydrated[index]) return hydrated[index];
 
-  const value = this.values[index];
-  if (!value || typeof value !== "object") {
-    this.hydrated[index] = value;
-  } else if (Array.isArray(value)) {
+  const value = values[index];
+  if (!value || typeof value !== "object") return (hydrated[index] = value);
+
+  if (Array.isArray(value)) {
     if (typeof value[0] === "string") {
       switch (value[0]) {
         case TYPE_DATE:
-          this.hydrated[index] = new Date(value[1]);
-          break;
+          return (hydrated[index] = new Date(value[1]));
         case TYPE_BIGINT:
-          this.hydrated[index] = BigInt(value[1]);
-          break;
+          return (hydrated[index] = BigInt(value[1]));
         case TYPE_REGEXP:
-          this.hydrated[index] = new RegExp(value[1], value[2]);
-          break;
+          return (hydrated[index] = new RegExp(value[1], value[2]));
         case TYPE_SYMBOL:
-          this.hydrated[index] = Symbol.for(value[1]);
-          break;
+          return (hydrated[index] = Symbol.for(value[1]));
         case TYPE_SET:
           const set = new Set();
-          this.hydrated[index] = set;
-          for (let i = 1; i < value.length; i += 1) {
+          hydrated[index] = set;
+          for (let i = 1; i < value.length; i++)
             set.add(hydrate.call(this, value[i]));
-          }
-          break;
+          return set;
         case TYPE_MAP:
           const map = new Map();
-          this.hydrated[index] = map;
+          hydrated[index] = map;
           for (let i = 1; i < value.length; i += 2) {
             map.set(
               hydrate.call(this, value[i]),
               hydrate.call(this, value[i + 1])
             );
           }
-          break;
+          return map;
         case TYPE_PROMISE:
-          if (this.hydrated[value[1]]) {
-            this.hydrated[index] = this.hydrated[value[1]];
+          if (hydrated[value[1]]) {
+            return (hydrated[index] = hydrated[value[1]]);
           } else {
-            const deferred = new Deferred();
-            this.deferred[value[1]] = deferred;
-            this.hydrated[index] = deferred.promise;
+            const d = new Deferred();
+            deferred[value[1]] = d;
+            return (hydrated[index] = d.promise);
           }
-          break;
         default:
-          throw new Error(`Invalid input`);
+          throw new SyntaxError();
       }
     } else {
-      const array = new Array(value.length);
-      this.hydrated[index] = array;
+      const array: unknown[] = [];
+      hydrated[index] = array;
 
-      for (let i = 0; i < value.length; i += 1) {
+      for (let i = 0; i < value.length; i++) {
         const n = value[i];
-        if (n === HOLE) continue;
-
-        array[i] = hydrate.call(this, n);
+        if (n !== HOLE) array[i] = hydrate.call(this, n);
       }
+      return array;
     }
   } else {
     const object: Record<string, unknown> = {};
-    this.hydrated[index] = object;
+    hydrated[index] = object;
 
-    for (const key in value) {
-      const n = (value as any)[key];
-      object[key] = hydrate.call(this, n);
-    }
+    for (const key in value)
+      object[key] = hydrate.call(this, (value as Record<string, number>)[key]);
+    return object;
   }
-
-  return this.hydrated[index];
 }
