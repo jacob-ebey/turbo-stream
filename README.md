@@ -1,4 +1,4 @@
-# Turbo Stream
+# Turbo Stream <br> [![turbo-stream's badge](https://deno.bundlejs.com/?q=turbo-stream&badge=detailed)](https://bundlejs.com/?q=turbo-stream)
 
 A streaming data transport format that aims to support built-in features such as Promises, Dates, RegExps, Maps, Sets and more.
 
@@ -18,10 +18,10 @@ npm install turbo-stream
 ```js
 import { decode, encode } from "turbo-stream";
 
-const encodedStream = encode(Promise.resolve(42));
+const encodedStream = encode({ answer: Promise.resolve(42) });
 const decoded = await decode(encodedStream);
-console.log(decoded.value); // a Promise
-console.log(await decoded.value); // 42
+console.log(decoded.value.answer); // a Promise
+console.log(await decoded.value.answer); // 42
 await decoded.done; // wait for the stream to finish
 ```
 
