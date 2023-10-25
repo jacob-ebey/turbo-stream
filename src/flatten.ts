@@ -6,6 +6,7 @@ import {
   POSITIVE_INFINITY,
   TYPE_BIGINT,
   TYPE_DATE,
+  TYPE_ERROR,
   TYPE_MAP,
   TYPE_PROMISE,
   TYPE_REGEXP,
@@ -80,6 +81,12 @@ function stringify(this: ThisEncode, input: unknown, index: number) {
       } else if (input instanceof Promise) {
         str[index] = `["${TYPE_PROMISE}",${index}]`;
         this.deferred[index] = input;
+      } else if (input instanceof Error) {
+        str[index] = `["${TYPE_ERROR}",${JSON.stringify(input.message)}`;
+        if (input.name !== "Error") {
+          str[index] += `,${JSON.stringify(input.name)}`;
+        }
+        str[index] += "]";
       } else if (isPlainObject(input)) {
         const parts = [];
         for (const key in input)

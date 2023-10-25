@@ -43,6 +43,81 @@ test("should encode and decode string", async () => {
   expect(output).toEqual(input);
 });
 
+test("should encode and decode Date", async () => {
+  const input = new Date();
+  const output = await quickDecode(encode(input));
+  expect(output).toEqual(input);
+});
+
+test("should encode and decode NaN", async () => {
+  const input = NaN;
+  const output = await quickDecode(encode(input));
+  expect(output).toEqual(input);
+});
+
+test("should encode and decode Infinity", async () => {
+  const input = Infinity;
+  const output = await quickDecode(encode(input));
+  expect(output).toEqual(input);
+});
+
+test("should encode and decode -Infinity", async () => {
+  const input = -Infinity;
+  const output = await quickDecode(encode(input));
+  expect(output).toEqual(input);
+});
+
+test("should encode and decode -0", async () => {
+  const input = -0;
+  const output = await quickDecode(encode(input));
+  expect(output).toEqual(input);
+});
+
+test("should encode and decode BigInt", async () => {
+  const input = BigInt(42);
+  const output = await quickDecode(encode(input));
+  expect(output).toEqual(input);
+});
+
+test("should encode and decode RegExp", async () => {
+  const input = /foo/g;
+  const output = await quickDecode(encode(input));
+  expect(output).toEqual(input);
+});
+
+test("should encode and decode Symbol", async () => {
+  const input = Symbol.for("foo");
+  const output = await quickDecode(encode(input));
+  expect(output).toEqual(input);
+});
+
+test("should encode and decode Map", async () => {
+  const input = new Map([
+    ["foo", "bar"],
+    ["baz", "qux"],
+  ]);
+  const output = await quickDecode(encode(input));
+  expect(output).toEqual(input);
+});
+
+test("should encode and decode Set", async () => {
+  const input = new Set(["foo", "bar"]);
+  const output = await quickDecode(encode(input));
+  expect(output).toEqual(input);
+});
+
+test("should encode and decode an Error", async () => {
+  const input = new Error("foo");
+  const output = await quickDecode(encode(input));
+  expect(output).toEqual(input);
+});
+
+test("should encode and decode an EvalError", async () => {
+  const input = new EvalError("foo");
+  const output = await quickDecode(encode(input));
+  expect(output).toEqual(input);
+});
+
 test("should encode and decode array", async () => {
   const input = [1, 2, 3];
   const output = await quickDecode(encode(input));
@@ -71,7 +146,18 @@ test("should encode and decode object with undefined", async () => {
 test("should encode and decode promise", async () => {
   const input = Promise.resolve("foo");
   const decoded = await decode(encode(input));
-  expect(decoded.value).toEqual(await input);
+  expect(decoded.value).toBeInstanceOf(Promise);
+  expect(await decoded.value).toEqual(await input);
+  await decoded.done;
+});
+
+test("should encode and decode rejected promise", async () => {
+  const input = Promise.reject(new Error("foo"));
+  const decoded = await decode(encode(input));
+  expect(decoded.value).toBeInstanceOf(Promise);
+  await expect(decoded.value).rejects.toEqual(
+    await input.catch((reason) => reason)
+  );
   await decoded.done;
 });
 

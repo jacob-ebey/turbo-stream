@@ -4,6 +4,7 @@ import {
   createLineSplittingTransform,
   Deferred,
   TYPE_PROMISE,
+  TYPE_ERROR,
   type ThisDecode,
   type ThisEncode,
 } from "./utils.js";
@@ -75,7 +76,7 @@ async function decodeDeferred(
     if (!read.value) continue;
     const line = read.value;
     switch (line[0]) {
-      case TYPE_PROMISE:
+      case TYPE_PROMISE: {
         const colonIndex = line.indexOf(":");
         const deferredId = Number(line.slice(1, colonIndex));
         const deferred = this.deferred[deferredId];
@@ -92,9 +93,25 @@ async function decodeDeferred(
         const value = unflatten.call(this, jsonLine);
         deferred.resolve(value);
         break;
-      // case TYPE_PROMISE_ERROR:
-      //   // TODO: transport promise rejections
-      //   break;
+      }
+      case TYPE_ERROR: {
+        const colonIndex = line.indexOf(":");
+        const deferredId = Number(line.slice(1, colonIndex));
+        const deferred = this.deferred[deferredId];
+        if (!deferred) {
+          throw new Error(`Deferred ID ${deferredId} not found in stream`);
+        }
+        const lineData = line.slice(colonIndex + 1);
+        let jsonLine;
+        try {
+          jsonLine = JSON.parse(lineData);
+        } catch (reason) {
+          throw new SyntaxError();
+        }
+        const value = unflatten.call(this, jsonLine);
+        deferred.reject(value);
+        break;
+      }
       default:
         throw new SyntaxError();
     }
@@ -113,7 +130,7 @@ export function encode(input: unknown) {
   let lastSentIndex = 0;
   const readable = new ReadableStream<Uint8Array>({
     async start(controller) {
-      const id = flatten.call(encoder, await input);
+      const id = flatten.call(encoder, input);
       if (id < 0) {
         controller.enqueue(textEncoder.encode(`${id}\n`));
       } else {
@@ -149,8 +166,30 @@ export function encode(input: unknown) {
                   }
                 },
                 (reason) => {
-                  // TODO: Encode and send errors
-                  throw reason;
+                  if (
+                    !reason ||
+                    typeof reason !== "object" ||
+                    !(reason instanceof Error)
+                  ) {
+                    reason = new Error("An unknown error occurred");
+                  }
+
+                  const id = flatten.call(encoder, reason);
+                  if (id < 0) {
+                    controller.enqueue(
+                      textEncoder.encode(`${TYPE_ERROR}${deferredId}:${id}\n`)
+                    );
+                  } else {
+                    const values = encoder.stringified
+                      .slice(lastSentIndex + 1)
+                      .join(",");
+                    controller.enqueue(
+                      textEncoder.encode(
+                        `${TYPE_ERROR}${deferredId}:[${values}]\n`
+                      )
+                    );
+                    lastSentIndex = encoder.stringified.length - 1;
+                  }
                 }
               )
               .finally(() => {

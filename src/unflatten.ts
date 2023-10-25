@@ -14,7 +14,16 @@ import {
   TYPE_SYMBOL,
   UNDEFINED,
   type ThisDecode,
+  TYPE_ERROR,
 } from "./utils.js";
+
+const globalObj = (
+  typeof window !== "undefined"
+    ? window
+    : typeof globalThis !== "undefined"
+    ? globalThis
+    : undefined
+) as Record<string, typeof Error> | undefined;
 
 export function unflatten(this: ThisDecode, parsed: unknown): unknown {
   if (typeof parsed === "number") return hydrate.call(this, parsed);
@@ -84,6 +93,14 @@ function hydrate(this: ThisDecode, index: number) {
             deferred[value[1]] = d;
             return (hydrated[index] = d.promise);
           }
+        case TYPE_ERROR:
+          const [, message, errorType] = value;
+          let error =
+            errorType && globalObj && globalObj[errorType]
+              ? new globalObj[errorType](message)
+              : new Error(message);
+          hydrated[index] = error;
+          return error;
         default:
           throw new SyntaxError();
       }

@@ -13,6 +13,7 @@ export const TYPE_REGEXP = "R";
 export const TYPE_SYMBOL = "Y";
 export const TYPE_NULL_OBJECT = "N";
 export const TYPE_PROMISE = "P";
+export const TYPE_ERROR = "E";
 
 export interface ThisDecode {
   values: unknown[];
