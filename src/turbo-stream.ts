@@ -44,13 +44,6 @@ export async function decode(readable: ReadableStream<Uint8Array>) {
   };
 }
 
-class SyntaxError extends Error {
-  name = "SyntaxError";
-  constructor(message?: string) {
-    super(message ?? `Invalid input`);
-  }
-}
-
 async function decodeInitial(
   this: ThisDecode,
   reader: ReadableStreamDefaultReader<string>
