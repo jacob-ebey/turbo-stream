@@ -1,146 +1,177 @@
-import { TYPE_PROMISE } from "./constants.js";
-import { unflatten, type ThisDecode } from "./decode.js";
-import { Deferred } from "./deferred.js";
-import { flatten, type ThisEncode } from "./encode.js";
+import { flatten } from "./flatten.js";
+import { unflatten } from "./unflatten.js";
+import {
+  createLineSplittingTransform,
+  Deferred,
+  TYPE_PROMISE,
+  type ThisDecode,
+  type ThisEncode,
+} from "./utils.js";
 
-export async function decode<T = unknown>(
-  input: ReadableStream<Uint8Array>
-): Promise<{ value: T; done: Promise<void> }> {
-  const decoder = new Decoder(input);
-  return decoder.decode() as Promise<{ value: T; done: Promise<void> }>;
-}
+export async function decode(readable: ReadableStream<Uint8Array>) {
+  const done = new Deferred<void>();
+  const reader = readable
+    .pipeThrough(createLineSplittingTransform())
+    .getReader();
 
-class Decoder {
-  private reader: ReadableStreamDefaultReader<Uint8Array>;
-  private decoder: ThisDecode;
-  constructor(input: ReadableStream<Uint8Array>) {
-    this.reader = input.getReader();
-    this.decoder = {
-      deferred: {},
-      hydrated: [],
-      values: [],
-    };
-  }
-  async decode(): Promise<{ value: unknown; done: Promise<void> }> {
-    const iterator = makeTextFileLineIterator(this.reader);
+  const decoder: ThisDecode = {
+    values: [],
+    hydrated: [],
+    deferred: {},
+  };
 
-    const read = await iterator.next();
-    if (!read.value || read.done) throw new Error("Invalid input");
-    const decoded = unflatten.call(this.decoder, JSON.parse(read.value));
+  const decoded = await decodeInitial.call(decoder, reader);
 
-    const done = (async () => {
-      for await (const line of iterator) {
-        let type = line[0];
-
-        switch (type) {
-          case TYPE_PROMISE:
-            const colonIndex = line.indexOf(":");
-            const deferredId = Number(line.slice(1, colonIndex));
-            const lineData = line.slice(colonIndex + 1);
-            const deferredResult = unflatten.call(
-              this.decoder,
-              JSON.parse(lineData)
-            );
-            this.decoder.deferred[deferredId].resolve(deferredResult);
-            break;
-          default:
-            throw new Error("Invalid input");
+  let donePromise = done.promise;
+  if (decoded.done) {
+    done.resolve();
+  } else {
+    donePromise = decodeDeferred
+      .call(decoder, reader)
+      .then(done.resolve)
+      .catch((reason) => {
+        for (const deferred of Object.values(decoder.deferred)) {
+          deferred.reject(reason);
         }
-      }
-    })();
 
-    return { value: decoded, done };
+        done.reject(reason);
+      });
+  }
+
+  return {
+    done: donePromise.then(() => reader.closed),
+    value: decoded.value,
+  };
+}
+
+class SyntaxError extends Error {
+  name = "SyntaxError";
+  constructor(message?: string) {
+    super(message ?? `Invalid input`);
   }
 }
 
-export function encode(input: unknown): ReadableStream<Uint8Array> {
-  return new ReadableStream<Uint8Array>({
+async function decodeInitial(
+  this: ThisDecode,
+  reader: ReadableStreamDefaultReader<string>
+) {
+  const read = await reader.read();
+  if (!read.value) {
+    throw new SyntaxError();
+  }
+
+  let line;
+  try {
+    line = JSON.parse(read.value);
+  } catch (reason) {
+    throw new SyntaxError();
+  }
+
+  return {
+    done: read.done,
+    value: unflatten.call(this, line),
+  };
+}
+
+async function decodeDeferred(
+  this: ThisDecode,
+  reader: ReadableStreamDefaultReader<string>
+) {
+  let read = await reader.read();
+  while (!read.done) {
+    if (!read.value) continue;
+    const line = read.value;
+    switch (line[0]) {
+      case TYPE_PROMISE:
+        const colonIndex = line.indexOf(":");
+        const deferredId = Number(line.slice(1, colonIndex));
+        const deferred = this.deferred[deferredId];
+        if (!deferred) {
+          throw new Error(`Deferred ID ${deferredId} not found in stream`);
+        }
+        const lineData = line.slice(colonIndex + 1);
+        let jsonLine;
+        try {
+          jsonLine = JSON.parse(lineData);
+        } catch (reason) {
+          throw new SyntaxError();
+        }
+        const value = unflatten.call(this, jsonLine);
+        deferred.resolve(value);
+        break;
+      // case TYPE_PROMISE_ERROR:
+      //   // TODO: transport promise rejections
+      //   break;
+      default:
+        throw new SyntaxError();
+    }
+    read = await reader.read();
+  }
+}
+
+export function encode(input: unknown) {
+  const encoder: ThisEncode = {
+    deferred: {},
+    index: 0,
+    indicies: new Map(),
+    stringified: [],
+  };
+  const textEncoder = new TextEncoder();
+  let lastSentIndex = 0;
+  const readable = new ReadableStream<Uint8Array>({
     async start(controller) {
-      const textEncoder = new TextEncoder();
-      const encoder: ThisEncode = {
-        index: 0,
-        indicies: new Map(),
-        stringified: [],
-        deferred: [],
-      };
-
-      const id = flatten.call(encoder, input);
-      const encoded =
-        id < 0 ? String(id) : "[" + encoder.stringified.join(",") + "]";
-      controller.enqueue(textEncoder.encode(encoded + "\n"));
-
-      let activeDeferred = 0;
-      const done = new Deferred<void>();
-      let alreadyDone = false;
-
-      if (encoder.deferred.length === 0) {
-        alreadyDone = true;
-        done.resolve();
+      const id = flatten.call(encoder, await input);
+      if (id < 0) {
+        controller.enqueue(textEncoder.encode(`${id}\n`));
       } else {
-        for (const [promiseId, promise] of encoder.deferred) {
-          activeDeferred++;
-          promise
-            .then((value) => {
-              const id = flatten.call(encoder, value);
-              const encoded =
-                id < 0
-                  ? String(id)
-                  : "[" + encoder.stringified.slice(id).join(",") + "]";
-              controller.enqueue(
-                textEncoder.encode(
-                  `${TYPE_PROMISE}${promiseId}:` + encoded + "\n"
-                )
-              );
-
-              activeDeferred--;
-              if (activeDeferred === 0) {
-                alreadyDone = true;
-                done.resolve();
-              }
-            })
-            .catch((reason) => {
-              if (alreadyDone) return;
-              alreadyDone = true;
-              done.reject(reason);
-            });
-        }
+        controller.enqueue(
+          textEncoder.encode(`[${encoder.stringified.join(",")}]\n`)
+        );
+        lastSentIndex = encoder.stringified.length - 1;
       }
 
-      await done.promise;
+      const seenPromises = new WeakSet<Promise<unknown>>();
+      while (Object.keys(encoder.deferred).length > 0) {
+        for (const [deferredId, deferred] of Object.entries(encoder.deferred)) {
+          if (seenPromises.has(deferred)) continue;
+          seenPromises.add(
+            (encoder.deferred[Number(deferredId)] = deferred
+              .then(
+                (resolved) => {
+                  const id = flatten.call(encoder, resolved);
+                  if (id < 0) {
+                    controller.enqueue(
+                      textEncoder.encode(`${TYPE_PROMISE}${deferredId}:${id}\n`)
+                    );
+                  } else {
+                    const values = encoder.stringified
+                      .slice(lastSentIndex + 1)
+                      .join(",");
+                    controller.enqueue(
+                      textEncoder.encode(
+                        `${TYPE_PROMISE}${deferredId}:[${values}]\n`
+                      )
+                    );
+                    lastSentIndex = encoder.stringified.length - 1;
+                  }
+                },
+                (reason) => {
+                  // TODO: Encode and send errors
+                  throw reason;
+                }
+              )
+              .finally(() => {
+                delete encoder.deferred[Number(deferredId)];
+              }))
+          );
+        }
+        await Promise.race(Object.values(encoder.deferred));
+      }
+      await Promise.all(Object.values(encoder.deferred));
+
       controller.close();
     },
   });
-}
 
-async function* makeTextFileLineIterator(
-  reader: ReadableStreamDefaultReader<Uint8Array>
-): AsyncGenerator<string> {
-  const decoder = new TextDecoder();
-  let read = await reader.read();
-  let chunk = read.value ? decoder.decode(read.value, { stream: true }) : "";
-
-  let re = /\r\n|\n|\r/gm;
-  let startIndex = 0;
-
-  for (;;) {
-    let result = re.exec(chunk);
-    if (!result) {
-      if (read.done) {
-        break;
-      }
-      let remainder = chunk.slice(startIndex);
-      read = await reader.read();
-      chunk =
-        remainder +
-        (read.value ? decoder.decode(read.value, { stream: true }) : "");
-      startIndex = re.lastIndex = 0;
-      continue;
-    }
-    yield chunk.substring(startIndex, result.index);
-    startIndex = re.lastIndex;
-  }
-  if (startIndex < chunk.length) {
-    // last line didn't end in a newline char
-    yield chunk.slice(startIndex);
-  }
+  return readable;
 }

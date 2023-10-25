@@ -1,26 +1,20 @@
 import {
+  Deferred,
   HOLE,
   NAN,
   NEGATIVE_INFINITY,
   NEGATIVE_ZERO,
   POSITIVE_INFINITY,
-  UNDEFINED,
   TYPE_BIGINT,
   TYPE_DATE,
   TYPE_MAP,
+  TYPE_PROMISE,
   TYPE_REGEXP,
   TYPE_SET,
   TYPE_SYMBOL,
-  TYPE_PROMISE,
-} from "./constants.js";
-
-import { Deferred } from "./deferred.js";
-
-export interface ThisDecode {
-  values: unknown[];
-  hydrated: unknown[];
-  deferred: Record<number, Deferred<unknown>>;
-}
+  UNDEFINED,
+  type ThisDecode,
+} from "./utils.js";
 
 export function unflatten(this: ThisDecode, parsed: unknown): unknown {
   if (typeof parsed === "number") return hydrate.call(this, parsed, true);
@@ -83,9 +77,13 @@ function hydrate(this: ThisDecode, index: number, standalone?: true) {
           }
           break;
         case TYPE_PROMISE:
-          const deferred = new Deferred();
-          this.deferred[value[1]] = deferred;
-          this.hydrated[index] = deferred.promise;
+          if (this.hydrated[value[1]]) {
+            this.hydrated[index] = this.hydrated[value[1]];
+          } else {
+            const deferred = new Deferred();
+            this.deferred[value[1]] = deferred;
+            this.hydrated[index] = deferred.promise;
+          }
           break;
         default:
           throw new Error(`Invalid input`);

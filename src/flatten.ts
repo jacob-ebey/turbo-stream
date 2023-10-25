@@ -4,22 +4,16 @@ import {
   NEGATIVE_INFINITY,
   NEGATIVE_ZERO,
   POSITIVE_INFINITY,
-  UNDEFINED,
   TYPE_BIGINT,
   TYPE_DATE,
   TYPE_MAP,
+  TYPE_PROMISE,
   TYPE_REGEXP,
   TYPE_SET,
   TYPE_SYMBOL,
-  TYPE_PROMISE,
-} from "./constants.js";
-
-export interface ThisEncode {
-  index: number;
-  indicies: Map<unknown, number>;
-  stringified: string[];
-  deferred: [number, Promise<unknown>][];
-}
+  UNDEFINED,
+  type ThisEncode,
+} from "./utils.js";
 
 export function flatten(this: ThisEncode, input: unknown): number {
   if (this.indicies.has(input)) {
@@ -110,12 +104,11 @@ function stringify(this: ThisEncode, input: unknown, index: number) {
 
       if (input instanceof Promise) {
         this.stringified[index] = `["${TYPE_PROMISE}",${index}]`;
-        this.deferred.push([index, input]);
+        this.deferred[index] = input;
         break;
       }
 
       if (!isPlainObject(input)) {
-        console.log(input);
         throw new Error("Cannot encode object with prototype");
       }
 

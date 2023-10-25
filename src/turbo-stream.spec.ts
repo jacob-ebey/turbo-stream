@@ -71,7 +71,26 @@ test("should encode and decode object with undefined", async () => {
 test("should encode and decode promise", async () => {
   const input = Promise.resolve("foo");
   const decoded = await decode(encode(input));
-  expect(decoded.value).toBeInstanceOf(Promise);
-  expect(await decoded.value).toEqual(await input);
+  expect(decoded.value).toEqual(await input);
+  await decoded.done;
+});
+
+test("should encode and decode object with promises as values", async () => {
+  const input = { foo: Promise.resolve("bar") };
+  const decoded = await decode(encode(input));
+  const value = decoded.value as typeof input;
+  expect(value).toEqual({ foo: expect.any(Promise) });
+  expect(await value.foo).toEqual(await input.foo);
+  await decoded.done;
+});
+
+test("should encode and decode set with promises as values", async () => {
+  const prom = Promise.resolve("foo");
+  const input = new Set([prom, prom]);
+  const decoded = await decode(encode(input));
+  const value = decoded.value as typeof input;
+  expect(value).toEqual(new Set([expect.any(Promise)]));
+  const proms = Array.from(value);
+  expect(await proms[0]).toEqual(await Array.from(input)[0]);
   await decoded.done;
 });
