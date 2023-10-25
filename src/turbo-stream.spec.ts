@@ -170,6 +170,15 @@ test("should encode and decode object with promises as values", async () => {
   await decoded.done;
 });
 
+test("should encode and decode object with rejected promise", async () => {
+  const input = { foo: Promise.reject(new Error("bar")) };
+  const decoded = await decode(encode(input));
+  const value = decoded.value as typeof input;
+  expect(value.foo).toBeInstanceOf(Promise);
+  expect(value.foo).rejects.toEqual(await input.foo.catch((reason) => reason));
+  return decoded.done;
+});
+
 test("should encode and decode set with promises as values", async () => {
   const prom = Promise.resolve("foo");
   const input = new Set([prom, prom]);
