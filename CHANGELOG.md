@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.3](https://github.com/jacob-ebey/turbo-stream/compare/v1.0.2...v1.0.3) (2023-10-26)
+
+
+### Bug Fixes
+
+* minify things a bit ([#8](https://github.com/jacob-ebey/turbo-stream/issues/8)) ([03c4861](https://github.com/jacob-ebey/turbo-stream/commit/03c4861c5713e26a5641cdd2d6db888711d3f963))
+
 ## [1.0.2](https://github.com/jacob-ebey/turbo-stream/compare/v1.0.1...v1.0.2) (2023-10-26)
 
 
