@@ -8,6 +8,7 @@ import {
   TYPE_DATE,
   TYPE_ERROR,
   TYPE_MAP,
+  TYPE_NULL_OBJECT,
   TYPE_PROMISE,
   TYPE_REGEXP,
   TYPE_SET,
@@ -87,6 +88,17 @@ function stringify(this: ThisEncode, input: unknown, index: number) {
           str[index] += `,${JSON.stringify(input.name)}`;
         }
         str[index] += "]";
+      } else if (Object.getPrototypeOf(input) === null) {
+        str[index] = `["${TYPE_NULL_OBJECT}"`;
+        const parts = [];
+        for (const key in input)
+          parts.push(
+            `${JSON.stringify(key)}:${flatten.call(
+              this,
+              input[key as keyof typeof input]
+            )}`
+          );
+        str[index] += ",{" + parts.join(",") + "}]";
       } else if (isPlainObject(input)) {
         const parts = [];
         for (const key in input)

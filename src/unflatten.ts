@@ -15,6 +15,7 @@ import {
   UNDEFINED,
   type ThisDecode,
   TYPE_ERROR,
+  TYPE_NULL_OBJECT,
 } from "./utils.js";
 
 const globalObj = (
@@ -85,6 +86,13 @@ function hydrate(this: ThisDecode, index: number) {
             );
           }
           return map;
+        case TYPE_NULL_OBJECT:
+          console.log({ value });
+          const obj = Object.create(null);
+          hydrated[index] = obj;
+          for (const key in value[1])
+            obj[key] = hydrate.call(this, value[1][key]);
+          return obj;
         case TYPE_PROMISE:
           if (hydrated[value[1]]) {
             return (hydrated[index] = hydrated[value[1]]);

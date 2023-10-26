@@ -91,6 +91,13 @@ test("should encode and decode Symbol", async () => {
   expect(output).toEqual(input);
 });
 
+test("should encode and decode object with null prototype", async () => {
+  const input = Object.create(null);
+  input.foo = "bar";
+  const output = await quickDecode(encode(input));
+  expect(output).toEqual(input);
+});
+
 test("should encode and decode Map", async () => {
   const input = new Map([
     ["foo", "bar"],
