@@ -1,12 +1,20 @@
 on:
-  - push
-  - pull_request
+  push:
+    branches:
+      - main
 
 jobs:
-  ci:
+  release-please:
     runs-on: ubuntu-latest
 
     steps:
+      - uses: google-github-actions/release-please-action@v3
+        id: release
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          release-type: node
+          package-name: turbo-stream
+
       - name: Checkout
         uses: actions/checkout@v3
 
@@ -38,8 +46,7 @@ jobs:
       - name: Build
         run: pnpm build
 
-      - name: Test
-        run: pnpm test
-
-      - name: Typecheck Tests
-        run: pnpm test-typecheck
+      - run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
+        if: ${{ steps.release.outputs.release_created }}
