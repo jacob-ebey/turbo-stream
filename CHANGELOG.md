@@ -1,5 +1,26 @@
 # Changelog
 
+## [1.0.1](https://github.com/jacob-ebey/turbo-stream/compare/v1.0.0...v1.0.1) (2023-10-26)
+
+
+### Features
+
+* add release pipeline to the repository ([db40f74](https://github.com/jacob-ebey/turbo-stream/commit/db40f74585a5c412dbefbe97cda725b6718bb502))
+* encode errors and promise rejections ([fa120e9](https://github.com/jacob-ebey/turbo-stream/commit/fa120e9e4f6828b5ff3ad909064d2ae43e95f32a))
+* minify things ([1db51bf](https://github.com/jacob-ebey/turbo-stream/commit/1db51bf8ecf3e854fd5b49b1afe44627a965bdac))
+* support null prototype objects ([27b3ece](https://github.com/jacob-ebey/turbo-stream/commit/27b3ece14d8f58c56b44a187851848f716de3876))
+
+
+### Bug Fixes
+
+* add repository to package.json ([#4](https://github.com/jacob-ebey/turbo-stream/issues/4)) ([9ae3518](https://github.com/jacob-ebey/turbo-stream/commit/9ae35180da01025e6dbaf1d3e16d1c10cc9ab043))
+
+
+### Miscellaneous Chores
+
+* release 1.0.0 ([ba652c6](https://github.com/jacob-ebey/turbo-stream/commit/ba652c6d91fdaa1c3cbc1c06800703c308fe77a4))
+* release 1.0.1 ([053108a](https://github.com/jacob-ebey/turbo-stream/commit/053108a6e02f1263b0c580f572c082758451a9f9))
+
 ## 1.0.0 (2023-10-26)
 
 Welcome to turbo-stream, a streaming data transport format that aims to support built-in features such as Promises, Dates, RegExps, Maps, Sets and more.
