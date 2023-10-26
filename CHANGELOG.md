@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.2](https://github.com/jacob-ebey/turbo-stream/compare/v1.0.1...v1.0.2) (2023-10-26)
+
+
+### Bug Fixes
+
+* add sideEffects: false to pkg json ([#6](https://github.com/jacob-ebey/turbo-stream/issues/6)) ([ad7b842](https://github.com/jacob-ebey/turbo-stream/commit/ad7b842fcfef7e002fec5e42124b48eeeb8113cf))
+
 ## [1.0.1](https://github.com/jacob-ebey/turbo-stream/compare/v1.0.0...v1.0.1) (2023-10-26)
 
 
