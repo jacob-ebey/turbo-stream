@@ -18,7 +18,8 @@ import {
 } from "./utils.js";
 
 export function flatten(this: ThisEncode, input: unknown): number {
-  const existing = this.indicies.get(input);
+  const { indicies } = this;
+  const existing = indicies.get(input);
   if (existing) return existing;
 
   if (input === undefined) return UNDEFINED;
@@ -28,13 +29,19 @@ export function flatten(this: ThisEncode, input: unknown): number {
   if (input === 0 && 1 / input < 0) return NEGATIVE_ZERO;
 
   const index = this.index++;
-  this.indicies.set(input, index);
+  indicies.set(input, index);
   stringify.call(this, input, index);
   return index;
 }
 
 function stringify(this: ThisEncode, input: unknown, index: number) {
+  const { deferred } = this;
   const str = this.stringified;
+
+  const partsForObj = (obj: any) =>
+    Object.keys(obj)
+      .map((k) => `${JSON.stringify(k)}:${flatten.call(this, obj[k])}`)
+      .join(",");
 
   switch (typeof input) {
     case "boolean":
@@ -81,7 +88,7 @@ function stringify(this: ThisEncode, input: unknown, index: number) {
           .join(",")}]`;
       } else if (input instanceof Promise) {
         str[index] = `["${TYPE_PROMISE}",${index}]`;
-        this.deferred[index] = input;
+        deferred[index] = input;
       } else if (input instanceof Error) {
         str[index] = `["${TYPE_ERROR}",${JSON.stringify(input.message)}`;
         if (input.name !== "Error") {
@@ -89,23 +96,9 @@ function stringify(this: ThisEncode, input: unknown, index: number) {
         }
         str[index] += "]";
       } else if (Object.getPrototypeOf(input) === null) {
-        str[index] = `["${TYPE_NULL_OBJECT}"`;
-        const parts = [];
-        for (const key in input)
-          parts.push(
-            `${JSON.stringify(key)}:${flatten.call(
-              this,
-              input[key as keyof typeof input]
-            )}`
-          );
-        str[index] += ",{" + parts.join(",") + "}]";
+        str[index] = `["${TYPE_NULL_OBJECT}",{${partsForObj(input)}}]`;
       } else if (isPlainObject(input)) {
-        const parts = [];
-        for (const key in input)
-          parts.push(
-            `${JSON.stringify(key)}:${flatten.call(this, input[key])}`
-          );
-        str[index] = "{" + parts.join(",") + "}";
+        str[index] = `{${partsForObj(input)}}`;
       } else {
         throw new Error("Cannot encode object with prototype");
       }

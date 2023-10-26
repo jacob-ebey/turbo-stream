@@ -7,15 +7,15 @@ import {
   POSITIVE_INFINITY,
   TYPE_BIGINT,
   TYPE_DATE,
+  TYPE_ERROR,
   TYPE_MAP,
+  TYPE_NULL_OBJECT,
   TYPE_PROMISE,
   TYPE_REGEXP,
   TYPE_SET,
   TYPE_SYMBOL,
   UNDEFINED,
   type ThisDecode,
-  TYPE_ERROR,
-  TYPE_NULL_OBJECT,
 } from "./utils.js";
 
 const globalObj = (
@@ -27,13 +27,14 @@ const globalObj = (
 ) as Record<string, typeof Error> | undefined;
 
 export function unflatten(this: ThisDecode, parsed: unknown): unknown {
+  const { hydrated, values } = this;
   if (typeof parsed === "number") return hydrate.call(this, parsed);
 
   if (!Array.isArray(parsed) || !parsed.length) throw new SyntaxError();
 
-  const startIndex = this.values.length;
-  this.values.push(...parsed);
-  this.hydrated.length = this.values.length;
+  const startIndex = values.length;
+  values.push(...parsed);
+  hydrated.length = values.length;
 
   return hydrate.call(this, startIndex);
 }
@@ -61,15 +62,16 @@ function hydrate(this: ThisDecode, index: number) {
 
   if (Array.isArray(value)) {
     if (typeof value[0] === "string") {
-      switch (value[0]) {
+      const [type, b, c] = value;
+      switch (type) {
         case TYPE_DATE:
-          return (hydrated[index] = new Date(value[1]));
+          return (hydrated[index] = new Date(b));
         case TYPE_BIGINT:
-          return (hydrated[index] = BigInt(value[1]));
+          return (hydrated[index] = BigInt(b));
         case TYPE_REGEXP:
-          return (hydrated[index] = new RegExp(value[1], value[2]));
+          return (hydrated[index] = new RegExp(b, c));
         case TYPE_SYMBOL:
-          return (hydrated[index] = Symbol.for(value[1]));
+          return (hydrated[index] = Symbol.for(b));
         case TYPE_SET:
           const set = new Set();
           hydrated[index] = set;
@@ -90,15 +92,14 @@ function hydrate(this: ThisDecode, index: number) {
           console.log({ value });
           const obj = Object.create(null);
           hydrated[index] = obj;
-          for (const key in value[1])
-            obj[key] = hydrate.call(this, value[1][key]);
+          for (const key in b) obj[key] = hydrate.call(this, b[key]);
           return obj;
         case TYPE_PROMISE:
-          if (hydrated[value[1]]) {
-            return (hydrated[index] = hydrated[value[1]]);
+          if (hydrated[b]) {
+            return (hydrated[index] = hydrated[b]);
           } else {
             const d = new Deferred();
-            deferred[value[1]] = d;
+            deferred[b] = d;
             return (hydrated[index] = d.promise);
           }
         case TYPE_ERROR:

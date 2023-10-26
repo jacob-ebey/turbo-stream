@@ -1,10 +1,10 @@
 import { flatten } from "./flatten.js";
 import { unflatten } from "./unflatten.js";
 import {
-  createLineSplittingTransform,
   Deferred,
-  TYPE_PROMISE,
   TYPE_ERROR,
+  TYPE_PROMISE,
+  createLineSplittingTransform,
   type ThisDecode,
   type ThisEncode,
 } from "./utils.js";
