@@ -2,6 +2,8 @@
 
 A streaming data transport format that aims to support built-in features such as Promises, Dates, RegExps, Maps, Sets and more.
 
+Decode runtime size: [![turbo-stream's badge](https://deno.bundlejs.com/badge?q=turbo-stream&badge=detailed&treeshake=%5B%7B+decode+%7D%5D)](https://bundlejs.com/?q=turbo-stream&treeshake=%5B%7B+decode+%7D%5D)
+
 ## Shout Out!
 
 Shout out to Rich Harris and his https://github.com/rich-harris/devalue project. Devalue has heavily influenced this project and portions
