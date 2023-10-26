@@ -22,9 +22,19 @@
     "test-typecheck": "tsc --noEmit --project tsconfig.spec.json",
     "prepublish": "attw $(npm pack) --ignore-rules cjs-resolves-to-esm"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "devalue",
+    "turbo",
+    "stream",
+    "enhanced",
+    "json"
+  ],
+  "author": "Jacob Ebey <jacob.ebey@live.com>",
   "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jacob-ebey/turbo-stream.git"
+  },
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.12.2",
     "@types/node": "^20.8.7",
