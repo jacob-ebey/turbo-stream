@@ -28,3 +28,4 @@ await decoded.done; // wait for the stream to finish
 ```
 
 Stackblitz: https://stackblitz.com/edit/stackblitz-starters-2wm7dh?file=index.js
+React SSR Example: https://github.com/jacob-ebey/turbo-stream-react-example
