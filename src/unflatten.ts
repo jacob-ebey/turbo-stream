@@ -5,6 +5,7 @@ import {
   NEGATIVE_INFINITY,
   NEGATIVE_ZERO,
   POSITIVE_INFINITY,
+  UNDEFINED,
   TYPE_BIGINT,
   TYPE_DATE,
   TYPE_ERROR,
@@ -14,7 +15,7 @@ import {
   TYPE_REGEXP,
   TYPE_SET,
   TYPE_SYMBOL,
-  UNDEFINED,
+  TYPE_URL,
   type ThisDecode,
 } from "./utils.js";
 
@@ -66,6 +67,8 @@ function hydrate(this: ThisDecode, index: number) {
       switch (type) {
         case TYPE_DATE:
           return (hydrated[index] = new Date(b));
+        case TYPE_URL:
+          return (hydrated[index] = new URL(b));
         case TYPE_BIGINT:
           return (hydrated[index] = BigInt(b));
         case TYPE_REGEXP:

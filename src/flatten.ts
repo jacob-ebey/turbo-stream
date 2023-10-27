@@ -4,6 +4,7 @@ import {
   NEGATIVE_INFINITY,
   NEGATIVE_ZERO,
   POSITIVE_INFINITY,
+  UNDEFINED,
   TYPE_BIGINT,
   TYPE_DATE,
   TYPE_ERROR,
@@ -13,7 +14,7 @@ import {
   TYPE_REGEXP,
   TYPE_SET,
   TYPE_SYMBOL,
-  UNDEFINED,
+  TYPE_URL,
   type ThisEncode,
 } from "./utils.js";
 
@@ -74,6 +75,8 @@ function stringify(this: ThisEncode, input: unknown, index: number) {
         str[index] = result + "]";
       } else if (input instanceof Date) {
         str[index] = `["${TYPE_DATE}",${input.getTime()}]`;
+      } else if (input instanceof URL) {
+        str[index] = `["${TYPE_URL}",${JSON.stringify(input.href)}]`;
       } else if (input instanceof RegExp) {
         str[index] = `["${TYPE_REGEXP}",${JSON.stringify(
           input.source

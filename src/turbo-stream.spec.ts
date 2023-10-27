@@ -91,6 +91,12 @@ test("should encode and decode Symbol", async () => {
   expect(output).toEqual(input);
 });
 
+test("should encode and decode URL", async () => {
+  const input = new URL("https://example.com");
+  const output = await quickDecode(encode(input));
+  expect(output).toEqual(input);
+});
+
 test("should encode and decode object with null prototype", async () => {
   const input = Object.create(null);
   input.foo = "bar";
