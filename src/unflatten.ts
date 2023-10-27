@@ -41,7 +41,7 @@ export function unflatten(this: ThisDecode, parsed: unknown): unknown {
 }
 
 function hydrate(this: ThisDecode, index: number) {
-  const { hydrated, values, deferred } = this;
+  const { hydrated, values, deferred, plugins } = this;
 
   switch (index) {
     case UNDEFINED:
@@ -63,6 +63,14 @@ function hydrate(this: ThisDecode, index: number) {
 
   if (Array.isArray(value)) {
     if (typeof value[0] === "string") {
+      if (Array.isArray(plugins)) {
+        const args = value.slice(1).map((i) => hydrate.call(this, i));
+        for (const plugin of plugins) {
+          const result = plugin(value[0], ...args);
+          if (result) return (hydrated[index] = result.value);
+        }
+      }
+
       const [type, b, c] = value;
       switch (type) {
         case TYPE_DATE:

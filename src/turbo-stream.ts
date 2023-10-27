@@ -5,11 +5,16 @@ import {
   TYPE_ERROR,
   TYPE_PROMISE,
   createLineSplittingTransform,
+  type DecodePlugin,
+  type EncodePlugin,
   type ThisDecode,
   type ThisEncode,
 } from "./utils.js";
 
-export async function decode(readable: ReadableStream<Uint8Array>) {
+export async function decode(
+  readable: ReadableStream<Uint8Array>,
+  plugins?: DecodePlugin[]
+) {
   const done = new Deferred<void>();
   const reader = readable
     .pipeThrough(createLineSplittingTransform())
@@ -19,6 +24,7 @@ export async function decode(readable: ReadableStream<Uint8Array>) {
     values: [],
     hydrated: [],
     deferred: {},
+    plugins,
   };
 
   const decoded = await decodeInitial.call(decoder, reader);
@@ -119,12 +125,13 @@ async function decodeDeferred(
   }
 }
 
-export function encode(input: unknown) {
+export function encode(input: unknown, plugins?: EncodePlugin[]) {
   const encoder: ThisEncode = {
     deferred: {},
     index: 0,
     indicies: new Map(),
     stringified: [],
+    plugins,
   };
   const textEncoder = new TextEncoder();
   let lastSentIndex = 0;

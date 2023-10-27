@@ -36,7 +36,7 @@ export function flatten(this: ThisEncode, input: unknown): number {
 }
 
 function stringify(this: ThisEncode, input: unknown, index: number) {
-  const { deferred } = this;
+  const { deferred, plugins } = this;
   const str = this.stringified;
 
   const partsForObj = (obj: any) =>
@@ -67,43 +67,65 @@ function stringify(this: ThisEncode, input: unknown, index: number) {
         break;
       }
 
-      let result = Array.isArray(input) ? "[" : "{";
-      if (Array.isArray(input)) {
-        for (let i = 0; i < input.length; i++)
-          result +=
-            (i ? "," : "") + (i in input ? flatten.call(this, input[i]) : HOLE);
-        str[index] = result + "]";
-      } else if (input instanceof Date) {
-        str[index] = `["${TYPE_DATE}",${input.getTime()}]`;
-      } else if (input instanceof URL) {
-        str[index] = `["${TYPE_URL}",${JSON.stringify(input.href)}]`;
-      } else if (input instanceof RegExp) {
-        str[index] = `["${TYPE_REGEXP}",${JSON.stringify(
-          input.source
-        )},${JSON.stringify(input.flags)}]`;
-      } else if (input instanceof Set) {
-        str[index] = `["${TYPE_SET}",${[...input]
-          .map((val) => flatten.call(this, val))
-          .join(",")}]`;
-      } else if (input instanceof Map) {
-        str[index] = `["${TYPE_MAP}",${[...input]
-          .flatMap(([k, v]) => [flatten.call(this, k), flatten.call(this, v)])
-          .join(",")}]`;
-      } else if (input instanceof Promise) {
-        str[index] = `["${TYPE_PROMISE}",${index}]`;
-        deferred[index] = input;
-      } else if (input instanceof Error) {
-        str[index] = `["${TYPE_ERROR}",${JSON.stringify(input.message)}`;
-        if (input.name !== "Error") {
-          str[index] += `,${JSON.stringify(input.name)}`;
+      const isArray = Array.isArray(input);
+      let pluginHandled = false;
+      if (!isArray && plugins) {
+        for (const plugin of plugins) {
+          const pluginResult = plugin(input);
+          if (Array.isArray(pluginResult)) {
+            pluginHandled = true;
+            const [pluginIdentifier, ...rest] = pluginResult;
+            str[index] = `[${JSON.stringify(pluginIdentifier)}`;
+            if (rest.length > 0) {
+              str[index] +=
+                "," + rest.map((v) => flatten.call(this, v)).join(",");
+            }
+            str[index] += "]";
+            break;
+          }
         }
-        str[index] += "]";
-      } else if (Object.getPrototypeOf(input) === null) {
-        str[index] = `["${TYPE_NULL_OBJECT}",{${partsForObj(input)}}]`;
-      } else if (isPlainObject(input)) {
-        str[index] = `{${partsForObj(input)}}`;
-      } else {
-        throw new Error("Cannot encode object with prototype");
+      }
+
+      if (!pluginHandled) {
+        let result = isArray ? "[" : "{";
+        if (isArray) {
+          for (let i = 0; i < input.length; i++)
+            result +=
+              (i ? "," : "") +
+              (i in input ? flatten.call(this, input[i]) : HOLE);
+          str[index] = result + "]";
+        } else if (input instanceof Date) {
+          str[index] = `["${TYPE_DATE}",${input.getTime()}]`;
+        } else if (input instanceof URL) {
+          str[index] = `["${TYPE_URL}",${JSON.stringify(input.href)}]`;
+        } else if (input instanceof RegExp) {
+          str[index] = `["${TYPE_REGEXP}",${JSON.stringify(
+            input.source
+          )},${JSON.stringify(input.flags)}]`;
+        } else if (input instanceof Set) {
+          str[index] = `["${TYPE_SET}",${[...input]
+            .map((val) => flatten.call(this, val))
+            .join(",")}]`;
+        } else if (input instanceof Map) {
+          str[index] = `["${TYPE_MAP}",${[...input]
+            .flatMap(([k, v]) => [flatten.call(this, k), flatten.call(this, v)])
+            .join(",")}]`;
+        } else if (input instanceof Promise) {
+          str[index] = `["${TYPE_PROMISE}",${index}]`;
+          deferred[index] = input;
+        } else if (input instanceof Error) {
+          str[index] = `["${TYPE_ERROR}",${JSON.stringify(input.message)}`;
+          if (input.name !== "Error") {
+            str[index] += `,${JSON.stringify(input.name)}`;
+          }
+          str[index] += "]";
+        } else if (Object.getPrototypeOf(input) === null) {
+          str[index] = `["${TYPE_NULL_OBJECT}",{${partsForObj(input)}}]`;
+        } else if (isPlainObject(input)) {
+          str[index] = `{${partsForObj(input)}}`;
+        } else {
+          throw new Error("Cannot encode object with prototype");
+        }
       }
       break;
     default:
