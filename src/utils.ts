@@ -16,10 +16,20 @@ export const TYPE_SET = "S";
 export const TYPE_SYMBOL = "Y";
 export const TYPE_URL = "U";
 
+export type DecodePlugin = (
+  type: string,
+  ...data: unknown[]
+) => { value: unknown } | false | null | undefined;
+
+export type EncodePlugin = (
+  value: unknown
+) => [string, ...unknown[]] | false | null | undefined;
+
 export interface ThisDecode {
   values: unknown[];
   hydrated: unknown[];
   deferred: Record<number, Deferred<unknown>>;
+  plugins?: DecodePlugin[];
 }
 
 export interface ThisEncode {
@@ -27,6 +37,7 @@ export interface ThisEncode {
   indicies: Map<unknown, number>;
   stringified: string[];
   deferred: Record<number, Promise<unknown>>;
+  plugins?: EncodePlugin[];
 }
 
 export class Deferred<T = unknown> {

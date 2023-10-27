@@ -202,3 +202,28 @@ test("should encode and decode set with promises as values", async () => {
   expect(await proms[0]).toEqual(await Array.from(input)[0]);
   await decoded.done;
 });
+
+test("should encode and decode custom type", async () => {
+  class Custom {
+    constructor(public foo: string) {}
+  }
+  const input = new Custom("bar");
+  const decoded = await decode(
+    encode(input, [
+      (value) => {
+        if (value instanceof Custom) {
+          return ["Custom", value.foo];
+        }
+      },
+    ]),
+    [
+      (type, foo) => {
+        if (type === "Custom") {
+          return { value: new Custom(foo as string) };
+        }
+      },
+    ]
+  );
+  expect(decoded.value).toBeInstanceOf(Custom);
+  expect(decoded.value).toEqual(input);
+});
