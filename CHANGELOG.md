@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.4](https://github.com/jacob-ebey/turbo-stream/compare/v1.0.3...v1.0.4) (2023-10-27)
+
+
+### Bug Fixes
+
+* add support for URL encoding and decoding ([#10](https://github.com/jacob-ebey/turbo-stream/issues/10)) ([acf9ae1](https://github.com/jacob-ebey/turbo-stream/commit/acf9ae1a2274a9289b4cf8962a9909e22abfbbe7))
+
 ## [1.0.3](https://github.com/jacob-ebey/turbo-stream/compare/v1.0.2...v1.0.3) (2023-10-26)
 
 
