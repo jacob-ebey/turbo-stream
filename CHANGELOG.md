@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/jacob-ebey/turbo-stream/compare/v1.0.4...v1.1.0) (2023-10-27)
+
+
+### Features
+
+* added plugin support ([#12](https://github.com/jacob-ebey/turbo-stream/issues/12)) ([49792ba](https://github.com/jacob-ebey/turbo-stream/commit/49792ba6161128f9f93bdc4237e9a0a59da1b5dd))
+
 ## [1.0.4](https://github.com/jacob-ebey/turbo-stream/compare/v1.0.3...v1.0.4) (2023-10-27)
 
 
