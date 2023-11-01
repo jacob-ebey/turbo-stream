@@ -34,7 +34,7 @@ export interface ThisDecode {
 
 export interface ThisEncode {
   index: number;
-  indicies: Map<unknown, number>;
+  indices: Map<unknown, number>;
   stringified: string[];
   deferred: Record<number, Promise<unknown>>;
   plugins?: EncodePlugin[];
