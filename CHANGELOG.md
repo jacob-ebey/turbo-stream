@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.1](https://github.com/jacob-ebey/turbo-stream/compare/v1.1.0...v1.1.1) (2023-11-01)
+
+
+### Bug Fixes
+
+* export plugin types ([#14](https://github.com/jacob-ebey/turbo-stream/issues/14)) ([f70f04a](https://github.com/jacob-ebey/turbo-stream/commit/f70f04a51e0296b70589469fdb20a1415cf00923))
+* flatten objects more ([f70f04a](https://github.com/jacob-ebey/turbo-stream/commit/f70f04a51e0296b70589469fdb20a1415cf00923))
+
 ## [1.1.0](https://github.com/jacob-ebey/turbo-stream/compare/v1.0.4...v1.1.0) (2023-10-27)
 
 
