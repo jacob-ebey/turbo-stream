@@ -11,6 +11,8 @@ import {
   type ThisEncode,
 } from "./utils.js";
 
+export type { DecodePlugin, EncodePlugin };
+
 export async function decode(
   readable: ReadableStream<Uint8Array>,
   plugins?: DecodePlugin[]
@@ -129,7 +131,7 @@ export function encode(input: unknown, plugins?: EncodePlugin[]) {
   const encoder: ThisEncode = {
     deferred: {},
     index: 0,
-    indicies: new Map(),
+    indices: new Map(),
     stringified: [],
     plugins,
   };

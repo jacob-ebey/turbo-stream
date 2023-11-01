@@ -19,8 +19,8 @@ import {
 } from "./utils.js";
 
 export function flatten(this: ThisEncode, input: unknown): number {
-  const { indicies } = this;
-  const existing = indicies.get(input);
+  const { indices } = this;
+  const existing = indices.get(input);
   if (existing) return existing;
 
   if (input === undefined) return UNDEFINED;
@@ -30,7 +30,7 @@ export function flatten(this: ThisEncode, input: unknown): number {
   if (input === 0 && 1 / input < 0) return NEGATIVE_ZERO;
 
   const index = this.index++;
-  indicies.set(input, index);
+  indices.set(input, index);
   stringify.call(this, input, index);
   return index;
 }
@@ -41,7 +41,7 @@ function stringify(this: ThisEncode, input: unknown, index: number) {
 
   const partsForObj = (obj: any) =>
     Object.keys(obj)
-      .map((k) => `${JSON.stringify(k)}:${flatten.call(this, obj[k])}`)
+      .map((k) => `"${flatten.call(this, k)}":${flatten.call(this, obj[k])}`)
       .join(",");
 
   switch (typeof input) {

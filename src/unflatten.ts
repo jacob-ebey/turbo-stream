@@ -100,10 +100,10 @@ function hydrate(this: ThisDecode, index: number) {
           }
           return map;
         case TYPE_NULL_OBJECT:
-          console.log({ value });
           const obj = Object.create(null);
           hydrated[index] = obj;
-          for (const key in b) obj[key] = hydrate.call(this, b[key]);
+          for (const key in b)
+            obj[hydrate.call(this, Number(key))] = hydrate.call(this, b[key]);
           return obj;
         case TYPE_PROMISE:
           if (hydrated[b]) {
@@ -138,8 +138,12 @@ function hydrate(this: ThisDecode, index: number) {
     const object: Record<string, unknown> = {};
     hydrated[index] = object;
 
-    for (const key in value)
-      object[key] = hydrate.call(this, (value as Record<string, number>)[key]);
+    for (const key in value) {
+      object[hydrate.call(this, Number(key))] = hydrate.call(
+        this,
+        (value as Record<string, number>)[key]
+      );
+    }
     return object;
   }
 }
