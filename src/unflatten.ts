@@ -63,14 +63,6 @@ function hydrate(this: ThisDecode, index: number) {
 
   if (Array.isArray(value)) {
     if (typeof value[0] === "string") {
-      if (Array.isArray(plugins)) {
-        const args = value.slice(1).map((i) => hydrate.call(this, i));
-        for (const plugin of plugins) {
-          const result = plugin(value[0], ...args);
-          if (result) return (hydrated[index] = result.value);
-        }
-      }
-
       const [type, b, c] = value;
       switch (type) {
         case TYPE_DATE:
@@ -122,6 +114,15 @@ function hydrate(this: ThisDecode, index: number) {
           hydrated[index] = error;
           return error;
         default:
+          // Run plugins at the end so we have a chance to resolve primitives
+          // without running into a loop
+          if (Array.isArray(plugins)) {
+            const args = value.slice(1).map((i) => hydrate.call(this, i));
+            for (const plugin of plugins) {
+              const result = plugin(value[0], ...args);
+              if (result) return (hydrated[index] = result.value);
+            }
+          }
           throw new SyntaxError();
       }
     } else {
