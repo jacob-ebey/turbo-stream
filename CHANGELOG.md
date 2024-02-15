@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.1](https://github.com/jacob-ebey/turbo-stream/compare/v1.2.0...v1.2.1) (2024-02-15)
+
+
+### Bug Fixes
+
+* plugin recursive loop ([#19](https://github.com/jacob-ebey/turbo-stream/issues/19)) ([a00a58f](https://github.com/jacob-ebey/turbo-stream/commit/a00a58f021884c02aa63fcb710420aebcfad87df))
+
 ## [1.2.0](https://github.com/jacob-ebey/turbo-stream/compare/v1.1.1...v1.2.0) (2023-11-01)
 
 
