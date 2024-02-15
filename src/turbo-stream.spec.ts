@@ -227,3 +227,46 @@ test("should encode and decode custom type", async () => {
   expect(decoded.value).toBeInstanceOf(Custom);
   expect(decoded.value).toEqual(input);
 });
+
+test("should encode and decode custom type when nested alongside Promise", async () => {
+  class Custom {
+    constructor(public foo: string) {}
+  }
+  const input = {
+    number: 1,
+    array: [2, "foo", 3],
+    set: new Set(["bar", "baz"]),
+    custom: new Custom("qux"),
+    promise: Promise.resolve("resolved"),
+  };
+  const decoded = (await decode(
+    encode(input, [
+      (value) => {
+        if (value instanceof Custom) {
+          return ["Custom", value.foo];
+        }
+      },
+    ]),
+    [
+      (type, foo) => {
+        if (type === "Custom") {
+          return { value: new Custom(foo as string) };
+        }
+      },
+    ]
+  )) as unknown as {
+    value: {
+      number: number;
+      array: [];
+      set: Set<string>;
+      custom: Custom;
+      promise: Promise<string>;
+    };
+  };
+  expect(decoded.value.number).toBe(input.number);
+  expect(decoded.value.array).toEqual(input.array);
+  expect(decoded.value.set).toEqual(input.set);
+  expect(decoded.value.custom).toBeInstanceOf(Custom);
+  expect(decoded.value.custom.foo).toBe("qux");
+  expect(await decoded.value.promise).toBe("resolved");
+});
