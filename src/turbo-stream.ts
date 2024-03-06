@@ -15,8 +15,10 @@ export type { DecodePlugin, EncodePlugin };
 
 export async function decode(
   readable: ReadableStream<Uint8Array>,
-  plugins?: DecodePlugin[]
+  options?: { plugins?: DecodePlugin[] }
 ) {
+  const { plugins } = options ?? {};
+
   const done = new Deferred<void>();
   const reader = readable
     .pipeThrough(createLineSplittingTransform())
@@ -127,13 +129,19 @@ async function decodeDeferred(
   }
 }
 
-export function encode(input: unknown, plugins?: EncodePlugin[]) {
+export function encode(
+  input: unknown,
+  options?: { plugins?: EncodePlugin[]; signal?: AbortSignal }
+) {
+  const { plugins, signal } = options ?? {};
+
   const encoder: ThisEncode = {
     deferred: {},
     index: 0,
     indices: new Map(),
     stringified: [],
     plugins,
+    signal,
   };
   const textEncoder = new TextEncoder();
   let lastSentIndex = 0;
@@ -154,7 +162,10 @@ export function encode(input: unknown, plugins?: EncodePlugin[]) {
         for (const [deferredId, deferred] of Object.entries(encoder.deferred)) {
           if (seenPromises.has(deferred)) continue;
           seenPromises.add(
-            (encoder.deferred[Number(deferredId)] = deferred
+            (encoder.deferred[Number(deferredId)] = raceSignal(
+              deferred,
+              encoder.signal
+            )
               .then(
                 (resolved) => {
                   const id = flatten.call(encoder, resolved);
@@ -215,4 +226,19 @@ export function encode(input: unknown, plugins?: EncodePlugin[]) {
   });
 
   return readable;
+}
+
+function raceSignal(promise: Promise<unknown>, signal?: AbortSignal) {
+  if (!signal) return promise;
+  if (signal.aborted)
+    return Promise.reject(signal.reason || new Error("Signal was aborted."));
+
+  const abort = new Promise<unknown>((resolve, reject) => {
+    signal.addEventListener("abort", (event) => {
+      reject(signal.reason || new Error("Signal was aborted."));
+    });
+    promise.then(resolve).catch(reject);
+  });
+  abort.catch(() => {});
+  return Promise.race([abort, promise]);
 }

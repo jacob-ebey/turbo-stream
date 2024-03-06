@@ -2,6 +2,7 @@ import { test } from "node:test";
 import { expect } from "expect";
 
 import { decode, encode } from "./turbo-stream.js";
+import { Deferred } from "./utils.js";
 
 async function quickDecode(stream: ReadableStream<Uint8Array>) {
   const decoded = await decode(stream);
@@ -209,20 +210,24 @@ test("should encode and decode custom type", async () => {
   }
   const input = new Custom("bar");
   const decoded = await decode(
-    encode(input, [
-      (value) => {
-        if (value instanceof Custom) {
-          return ["Custom", value.foo];
-        }
-      },
-    ]),
-    [
-      (type, foo) => {
-        if (type === "Custom") {
-          return { value: new Custom(foo as string) };
-        }
-      },
-    ]
+    encode(input, {
+      plugins: [
+        (value) => {
+          if (value instanceof Custom) {
+            return ["Custom", value.foo];
+          }
+        },
+      ],
+    }),
+    {
+      plugins: [
+        (type, foo) => {
+          if (type === "Custom") {
+            return { value: new Custom(foo as string) };
+          }
+        },
+      ],
+    }
   );
   expect(decoded.value).toBeInstanceOf(Custom);
   expect(decoded.value).toEqual(input);
@@ -240,20 +245,24 @@ test("should encode and decode custom type when nested alongside Promise", async
     promise: Promise.resolve("resolved"),
   };
   const decoded = (await decode(
-    encode(input, [
-      (value) => {
-        if (value instanceof Custom) {
-          return ["Custom", value.foo];
-        }
-      },
-    ]),
-    [
-      (type, foo) => {
-        if (type === "Custom") {
-          return { value: new Custom(foo as string) };
-        }
-      },
-    ]
+    encode(input, {
+      plugins: [
+        (value) => {
+          if (value instanceof Custom) {
+            return ["Custom", value.foo];
+          }
+        },
+      ],
+    }),
+    {
+      plugins: [
+        (type, foo) => {
+          if (type === "Custom") {
+            return { value: new Custom(foo as string) };
+          }
+        },
+      ],
+    }
   )) as unknown as {
     value: {
       number: number;
@@ -269,4 +278,25 @@ test("should encode and decode custom type when nested alongside Promise", async
   expect(decoded.value.custom).toBeInstanceOf(Custom);
   expect(decoded.value.custom.foo).toBe("qux");
   expect(await decoded.value.promise).toBe("resolved");
+});
+
+test("should propagate abort reason to deferred promises for sync resolved promise", async () => {
+  const abortController = new AbortController();
+  const reason = new Error("reason");
+  abortController.abort(reason);
+  const decoded = await decode(
+    encode(Promise.resolve("foo"), { signal: abortController.signal })
+  );
+  await expect(decoded.value).rejects.toEqual(reason);
+});
+
+test("should propagate abort reason to deferred promises for async resolved promise", async () => {
+  const abortController = new AbortController();
+  const deferred = new Deferred();
+  const reason = new Error("reason");
+  const decoded = await decode(
+    encode(deferred.promise, { signal: abortController.signal })
+  );
+  abortController.abort(reason);
+  await expect(decoded.value).rejects.toEqual(reason);
 });
