@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.0.0](https://github.com/jacob-ebey/turbo-stream/compare/v1.2.1...v2.0.0) (2024-03-06)
+
+
+### ⚠ BREAKING CHANGES
+
+* add abort signal ([#21](https://github.com/jacob-ebey/turbo-stream/issues/21))
+
+### Features
+
+* add abort signal ([#21](https://github.com/jacob-ebey/turbo-stream/issues/21)) ([34441a1](https://github.com/jacob-ebey/turbo-stream/commit/34441a1f6c405e9e27f3538764e45072e06fd6bf))
+
 ## [1.2.1](https://github.com/jacob-ebey/turbo-stream/compare/v1.2.0...v1.2.1) (2024-02-15)
 
 
