@@ -38,6 +38,7 @@ export interface ThisEncode {
   stringified: string[];
   deferred: Record<number, Promise<unknown>>;
   plugins?: EncodePlugin[];
+  signal?: AbortSignal;
 }
 
 export class Deferred<T = unknown> {
