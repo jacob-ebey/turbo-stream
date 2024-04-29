@@ -1,9 +1,10 @@
 export const HOLE = -1;
 export const NAN = -2;
-export const NEGATIVE_INFINITY = -4;
-export const NEGATIVE_ZERO = -5;
-export const POSITIVE_INFINITY = -3;
-export const UNDEFINED = -1;
+export const NEGATIVE_INFINITY = -3;
+export const NEGATIVE_ZERO = -4;
+export const NULL = -5;
+export const POSITIVE_INFINITY = -6;
+export const UNDEFINED = -7;
 
 export const TYPE_BIGINT = "B";
 export const TYPE_DATE = "D";
@@ -55,13 +56,13 @@ export class Deferred<T = unknown> {
 }
 
 export function createLineSplittingTransform() {
-  let decoder = new TextDecoder();
+  const decoder = new TextDecoder();
   let leftover = "";
 
   return new TransformStream({
     transform(chunk, controller) {
-      let str = decoder.decode(chunk, { stream: true });
-      let parts = (leftover + str).split("\n");
+      const str = decoder.decode(chunk, { stream: true });
+      const parts = (leftover + str).split("\n");
 
       // The last part might be a partial line, so keep it for the next chunk.
       leftover = parts.pop() || "";
