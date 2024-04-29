@@ -3,6 +3,7 @@ import {
   NAN,
   NEGATIVE_INFINITY,
   NEGATIVE_ZERO,
+  NULL,
   POSITIVE_INFINITY,
   UNDEFINED,
   TYPE_BIGINT,
@@ -24,9 +25,10 @@ export function flatten(this: ThisEncode, input: unknown): number {
   if (existing) return existing;
 
   if (input === undefined) return UNDEFINED;
+  if (input === null) return NULL;
   if (Number.isNaN(input)) return NAN;
-  if (input === Infinity) return POSITIVE_INFINITY;
-  if (input === -Infinity) return NEGATIVE_INFINITY;
+  if (input === Number.POSITIVE_INFINITY) return POSITIVE_INFINITY;
+  if (input === Number.NEGATIVE_INFINITY) return NEGATIVE_INFINITY;
   if (input === 0 && 1 / input < 0) return NEGATIVE_ZERO;
 
   const index = this.index++;
@@ -53,7 +55,7 @@ function stringify(this: ThisEncode, input: unknown, index: number) {
     case "bigint":
       str[index] = `["${TYPE_BIGINT}","${input}"]`;
       break;
-    case "symbol":
+    case "symbol": {
       const keyFor = Symbol.keyFor(input);
       if (!keyFor)
         throw new Error(
@@ -61,9 +63,10 @@ function stringify(this: ThisEncode, input: unknown, index: number) {
         );
       str[index] = `["${TYPE_SYMBOL}",${JSON.stringify(keyFor)}]`;
       break;
-    case "object":
+    }
+    case "object": {
       if (!input) {
-        str[index] = "null";
+        str[index] = `${NULL}`;
         break;
       }
 
@@ -77,8 +80,9 @@ function stringify(this: ThisEncode, input: unknown, index: number) {
             const [pluginIdentifier, ...rest] = pluginResult;
             str[index] = `[${JSON.stringify(pluginIdentifier)}`;
             if (rest.length > 0) {
-              str[index] +=
-                "," + rest.map((v) => flatten.call(this, v)).join(",");
+              str[index] += `,${rest
+                .map((v) => flatten.call(this, v))
+                .join(",")}`;
             }
             str[index] += "]";
             break;
@@ -93,7 +97,7 @@ function stringify(this: ThisEncode, input: unknown, index: number) {
             result +=
               (i ? "," : "") +
               (i in input ? flatten.call(this, input[i]) : HOLE);
-          str[index] = result + "]";
+          str[index] = `${result}]`;
         } else if (input instanceof Date) {
           str[index] = `["${TYPE_DATE}",${input.getTime()}]`;
         } else if (input instanceof URL) {
@@ -128,6 +132,7 @@ function stringify(this: ThisEncode, input: unknown, index: number) {
         }
       }
       break;
+    }
     default:
       throw new Error("Cannot encode function or unexpected type");
   }

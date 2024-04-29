@@ -4,6 +4,7 @@ import {
   NAN,
   NEGATIVE_INFINITY,
   NEGATIVE_ZERO,
+  NULL,
   POSITIVE_INFINITY,
   UNDEFINED,
   TYPE_BIGINT,
@@ -46,6 +47,8 @@ function hydrate(this: ThisDecode, index: number) {
   switch (index) {
     case UNDEFINED:
       return;
+    case NULL:
+      return null;
     case NAN:
       return NaN;
     case POSITIVE_INFINITY:

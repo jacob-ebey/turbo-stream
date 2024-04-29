@@ -2,7 +2,7 @@ import { test } from "node:test";
 import { expect } from "expect";
 
 import { decode, encode } from "./turbo-stream.js";
-import { Deferred } from "./utils.js";
+import { Deferred, type DecodePlugin, type EncodePlugin } from "./utils.js";
 
 async function quickDecode(stream: ReadableStream<Uint8Array>) {
   const decoded = await decode(stream);
@@ -165,6 +165,22 @@ test("should encode and decode promise", async () => {
   await decoded.done;
 });
 
+test("should encode and decode subsequent null from promise in object value", async () => {
+  const input = { root: null, promise: Promise.resolve(null) };
+  const decoded = await decode(encode(input));
+  const value = decoded.value as typeof input;
+  expect(await value.promise).toEqual(await input.promise);
+  await decoded.done;
+});
+
+test("should encode and decode subsequent undefined from promise in object value", async () => {
+  const input = { root: undefined, promise: Promise.resolve(undefined) };
+  const decoded = await decode(encode(input));
+  const value = decoded.value as typeof input;
+  expect(await value.promise).toEqual(await input.promise);
+  await decoded.done;
+});
+
 test("should encode and decode rejected promise", async () => {
   const input = Promise.reject(new Error("foo"));
   const decoded = await decode(encode(input));
@@ -204,33 +220,44 @@ test("should encode and decode set with promises as values", async () => {
   await decoded.done;
 });
 
-test("should encode and decode custom type", async () => {
+test("should encode and decode custom type", async ({ mock }) => {
   class Custom {
+    child: Custom | undefined;
     constructor(public foo: string) {}
   }
   const input = new Custom("bar");
+  input.child = new Custom("baz");
+
+  const decoder = mock.fn<DecodePlugin>((type, foo, child) => {
+    if (type === "Custom") {
+      const value = new Custom(foo as string);
+      value.child = child as Custom | undefined;
+      return { value };
+    }
+  });
+
+  const encoder = mock.fn<EncodePlugin>((value) => {
+    if (value instanceof Custom) {
+      return ["Custom", value.foo, value.child];
+    }
+  });
+
   const decoded = await decode(
     encode(input, {
-      plugins: [
-        (value) => {
-          if (value instanceof Custom) {
-            return ["Custom", value.foo];
-          }
-        },
-      ],
+      plugins: [encoder],
     }),
     {
-      plugins: [
-        (type, foo) => {
-          if (type === "Custom") {
-            return { value: new Custom(foo as string) };
-          }
-        },
-      ],
+      plugins: [decoder],
     }
   );
-  expect(decoded.value).toBeInstanceOf(Custom);
-  expect(decoded.value).toEqual(input);
+  const value = decoded.value as Custom;
+  expect(value).toBeInstanceOf(Custom);
+  expect(value.foo).toEqual(input.foo);
+  expect(value.child).toBeInstanceOf(Custom);
+  expect(value.child?.foo).toEqual(input.child.foo);
+
+  expect(encoder.mock.callCount()).toBe(2);
+  expect(decoder.mock.callCount()).toBe(2);
 });
 
 test("should encode and decode custom type when nested alongside Promise", async () => {
