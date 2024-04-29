@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.1](https://github.com/jacob-ebey/turbo-stream/compare/v2.0.0...v2.0.1) (2024-04-29)
+
+
+### Bug Fixes
+
+* subsequent null and undefined encoding failure ([#24](https://github.com/jacob-ebey/turbo-stream/issues/24)) ([47adfe1](https://github.com/jacob-ebey/turbo-stream/commit/47adfe1ad73b0486045bec338cc7405605bf645f))
+
 ## [2.0.0](https://github.com/jacob-ebey/turbo-stream/compare/v1.2.1...v2.0.0) (2024-03-06)
 
 
