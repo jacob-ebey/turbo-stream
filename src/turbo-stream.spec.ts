@@ -115,7 +115,7 @@ test("should encode and decode Map", async () => {
 });
 
 test("should encode and decode empty Map", async () => {
-  const input = new Map()
+  const input = new Map();
   const output = await quickDecode(encode(input));
   expect(output).toEqual(input);
 });
