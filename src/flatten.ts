@@ -19,10 +19,10 @@ import {
   type ThisEncode,
 } from "./utils.js";
 
-export function flatten(this: ThisEncode, input: unknown): number {
+export function flatten(this: ThisEncode, input: unknown, opts?: { ignoreExisting?: boolean }): number {
   const { indices } = this;
   const existing = indices.get(input);
-  if (existing) return existing;
+  if (existing && !opts?.ignoreExisting) return existing;
 
   if (input === undefined) return UNDEFINED;
   if (input === null) return NULL;

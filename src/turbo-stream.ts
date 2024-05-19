@@ -168,7 +168,10 @@ export function encode(
             )
               .then(
                 (resolved) => {
-                  const id = flatten.call(encoder, resolved);
+                  // flatten without checking for existing values as they can't be referenced in the promise response
+                  const id = flatten.call(encoder, resolved, {
+                    ignoreExisting: true,
+                  });
                   if (id < 0) {
                     controller.enqueue(
                       textEncoder.encode(`${TYPE_PROMISE}${deferredId}:${id}\n`)
