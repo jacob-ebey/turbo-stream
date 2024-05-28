@@ -174,9 +174,13 @@ export function encode(
                       textEncoder.encode(`${TYPE_PROMISE}${deferredId}:${id}\n`)
                     );
                   } else {
-                    const values = encoder.stringified
+                    let values = encoder.stringified
                       .slice(lastSentIndex + 1)
                       .join(",");
+                    if (values == "" && encoder.stringified[id]) {
+                      // If we've already resolved this value, just use it again
+                      values = encoder.stringified[id];
+                    }
                     controller.enqueue(
                       textEncoder.encode(
                         `${TYPE_PROMISE}${deferredId}:[${values}]\n`

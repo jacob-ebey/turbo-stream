@@ -200,6 +200,22 @@ test("should encode and decode object with promises as values", async () => {
   await decoded.done;
 });
 
+test("should encode and decode objects with multiple promises resolving to the same values", async () => {
+  const input = {
+    foo: Promise.resolve("baz"),
+    bar: Promise.resolve("baz"),
+  };
+  const decoded = await decode(encode(input));
+  const value = decoded.value as typeof input;
+  expect(value).toEqual({
+    foo: expect.any(Promise),
+    bar: expect.any(Promise),
+  });
+  expect(await value.foo).toEqual(await input.foo);
+  expect(await value.bar).toEqual(await input.bar);
+  await decoded.done;
+});
+
 test("should encode and decode object with rejected promise", async () => {
   const input = { foo: Promise.reject(new Error("bar")) };
   const decoded = await decode(encode(input));
