@@ -107,13 +107,21 @@ function stringify(this: ThisEncode, input: unknown, index: number) {
             input.source
           )},${JSON.stringify(input.flags)}]`;
         } else if (input instanceof Set) {
-          str[index] = `["${TYPE_SET}",${[...input]
-            .map((val) => flatten.call(this, val))
-            .join(",")}]`;
+          if (input.size > 0) {
+            str[index] = `["${TYPE_SET}",${[...input]
+              .map((val) => flatten.call(this, val))
+              .join(",")}]`;
+          } else {
+            str[index] = `["${TYPE_SET}"]`;
+          }
         } else if (input instanceof Map) {
-          str[index] = `["${TYPE_MAP}",${[...input]
-            .flatMap(([k, v]) => [flatten.call(this, k), flatten.call(this, v)])
-            .join(",")}]`;
+          if (input.size > 0) {
+            str[index] = `["${TYPE_MAP}",${[...input]
+              .flatMap(([k, v]) => [flatten.call(this, k), flatten.call(this, v)])
+              .join(",")}]`;
+          } else {
+            str[index] = `["${TYPE_MAP}"]`;
+          }
         } else if (input instanceof Promise) {
           str[index] = `["${TYPE_PROMISE}",${index}]`;
           deferred[index] = input;
