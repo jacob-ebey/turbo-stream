@@ -339,3 +339,62 @@ test("should propagate abort reason to deferred promises for async resolved prom
   abortController.abort(reason);
   await expect(decoded.value).rejects.toEqual(reason);
 });
+
+test("should encode and decode objects with multiple promises resolving to the same values", async () => {
+  const input = {
+    foo: Promise.resolve("baz"),
+    bar: Promise.resolve("baz"),
+  };
+
+  const decoded = await decode(encode(input));
+  const value = decoded.value as typeof input;
+  expect(value).toEqual({
+    foo: expect.any(Promise),
+    bar: expect.any(Promise),
+  });
+  expect(await value.foo).toEqual(await input.foo);
+  expect(await value.bar).toEqual(await input.bar);
+  await decoded.done;
+
+  // Ensure we aren't duplicating values in the stream
+  let encoded = "";
+  const stream = encode(input);
+  await stream.pipeThrough(new TextDecoderStream()).pipeTo(
+    new WritableStream({
+      write(chunk) {
+        encoded += chunk;
+      },
+    })
+  );
+  expect(Array.from(encoded.matchAll(/"baz"/g))).toHaveLength(1);
+});
+
+test("should encode and decode objects with multiple promises rejecting to the same values", async () => {
+  const err = new Error("baz");
+  const input = {
+    foo: Promise.reject(err),
+    bar: Promise.reject(err),
+  };
+
+  const decoded = await decode(encode(input));
+  const value = decoded.value as typeof input;
+  expect(value).toEqual({
+    foo: expect.any(Promise),
+    bar: expect.any(Promise),
+  });
+  expect(value.foo).rejects.toEqual(err);
+  expect(value.bar).rejects.toEqual(err);
+  await decoded.done;
+
+  // Ensure we aren't duplicating values in the stream
+  let encoded = "";
+  const stream = encode(input);
+  await stream.pipeThrough(new TextDecoderStream()).pipeTo(
+    new WritableStream({
+      write(chunk) {
+        encoded += chunk;
+      },
+    })
+  );
+  expect(Array.from(encoded.matchAll(/"baz"/g))).toHaveLength(1);
+});

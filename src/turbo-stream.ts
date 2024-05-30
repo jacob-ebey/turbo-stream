@@ -3,6 +3,7 @@ import { unflatten } from "./unflatten.js";
 import {
   Deferred,
   TYPE_ERROR,
+  TYPE_PREVIOUS_RESOLVED,
   TYPE_PROMISE,
   createLineSplittingTransform,
   type DecodePlugin,
@@ -100,8 +101,10 @@ async function decodeDeferred(
         } catch (reason) {
           throw new SyntaxError();
         }
+
         const value = unflatten.call(this, jsonLine);
         deferred.resolve(value);
+
         break;
       }
       case TYPE_ERROR: {
@@ -148,6 +151,9 @@ export function encode(
   const readable = new ReadableStream<Uint8Array>({
     async start(controller) {
       const id = flatten.call(encoder, input);
+      if (Array.isArray(id)) {
+        throw new Error("This should never happen");
+      }
       if (id < 0) {
         controller.enqueue(textEncoder.encode(`${id}\n`));
       } else {
@@ -169,7 +175,13 @@ export function encode(
               .then(
                 (resolved) => {
                   const id = flatten.call(encoder, resolved);
-                  if (id < 0) {
+                  if (Array.isArray(id)) {
+                    controller.enqueue(
+                      textEncoder.encode(
+                        `${TYPE_PROMISE}${deferredId}:[["${TYPE_PREVIOUS_RESOLVED}",${id[0]}]]\n`
+                      )
+                    );
+                  } else if (id < 0) {
                     controller.enqueue(
                       textEncoder.encode(`${TYPE_PROMISE}${deferredId}:${id}\n`)
                     );
@@ -195,7 +207,13 @@ export function encode(
                   }
 
                   const id = flatten.call(encoder, reason);
-                  if (id < 0) {
+                  if (Array.isArray(id)) {
+                    controller.enqueue(
+                      textEncoder.encode(
+                        `${TYPE_ERROR}${deferredId}:[["${TYPE_PREVIOUS_RESOLVED}",${id[0]}]]\n`
+                      )
+                    );
+                  } else if (id < 0) {
                     controller.enqueue(
                       textEncoder.encode(`${TYPE_ERROR}${deferredId}:${id}\n`)
                     );

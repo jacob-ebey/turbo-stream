@@ -12,6 +12,7 @@ import {
   TYPE_ERROR,
   TYPE_MAP,
   TYPE_NULL_OBJECT,
+  TYPE_PREVIOUS_RESOLVED,
   TYPE_PROMISE,
   TYPE_REGEXP,
   TYPE_SET,
@@ -41,7 +42,7 @@ export function unflatten(this: ThisDecode, parsed: unknown): unknown {
   return hydrate.call(this, startIndex);
 }
 
-function hydrate(this: ThisDecode, index: number) {
+function hydrate(this: ThisDecode, index: number): any {
   const { hydrated, values, deferred, plugins } = this;
 
   switch (index) {
@@ -116,6 +117,8 @@ function hydrate(this: ThisDecode, index: number) {
               : new Error(message);
           hydrated[index] = error;
           return error;
+        case TYPE_PREVIOUS_RESOLVED:
+          return hydrate.call(this, b);
         default:
           // Run plugins at the end so we have a chance to resolve primitives
           // without running into a loop

@@ -16,6 +16,7 @@ export const TYPE_REGEXP = "R";
 export const TYPE_SET = "S";
 export const TYPE_SYMBOL = "Y";
 export const TYPE_URL = "U";
+export const TYPE_PREVIOUS_RESOLVED = "Z";
 
 export type DecodePlugin = (
   type: string,

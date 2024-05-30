@@ -11,6 +11,7 @@ import {
   TYPE_ERROR,
   TYPE_MAP,
   TYPE_NULL_OBJECT,
+  TYPE_PREVIOUS_RESOLVED,
   TYPE_PROMISE,
   TYPE_REGEXP,
   TYPE_SET,
@@ -19,10 +20,13 @@ import {
   type ThisEncode,
 } from "./utils.js";
 
-export function flatten(this: ThisEncode, input: unknown): number {
+export function flatten(
+  this: ThisEncode,
+  input: unknown
+): number | [number] {
   const { indices } = this;
   const existing = indices.get(input);
-  if (existing) return existing;
+  if (existing) return [existing];
 
   if (input === undefined) return UNDEFINED;
   if (input === null) return NULL;
@@ -117,7 +121,10 @@ function stringify(this: ThisEncode, input: unknown, index: number) {
         } else if (input instanceof Map) {
           if (input.size > 0) {
             str[index] = `["${TYPE_MAP}",${[...input]
-              .flatMap(([k, v]) => [flatten.call(this, k), flatten.call(this, v)])
+              .flatMap(([k, v]) => [
+                flatten.call(this, k),
+                flatten.call(this, v),
+              ])
               .join(",")}]`;
           } else {
             str[index] = `["${TYPE_MAP}"]`;
