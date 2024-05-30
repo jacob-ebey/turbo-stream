@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.1.0](https://github.com/jacob-ebey/turbo-stream/compare/v2.0.1...v2.1.0) (2024-05-30)
+
+
+### Features
+
+* support pre resolved / rejected promises ([#32](https://github.com/jacob-ebey/turbo-stream/issues/32)) ([3f15f99](https://github.com/jacob-ebey/turbo-stream/commit/3f15f9917222878b8b8df6bcc687e2d2d63ccfd2))
+
+
+### Bug Fixes
+
+* support empty Map and Set ([#26](https://github.com/jacob-ebey/turbo-stream/issues/26)) ([#27](https://github.com/jacob-ebey/turbo-stream/issues/27)) ([fe156fe](https://github.com/jacob-ebey/turbo-stream/commit/fe156fe61612d968abe60448f0882e1490354278))
+
 ## [2.0.1](https://github.com/jacob-ebey/turbo-stream/compare/v2.0.0...v2.0.1) (2024-04-29)
 
 
