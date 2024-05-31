@@ -162,6 +162,30 @@ test("should encode and decode object", async () => {
   expect(output).toEqual(input);
 });
 
+test("should encode and decode object and dedupe object key, value, and promise value", async () => {
+  const input = { foo: "bar", bar: "bar", baz: Promise.resolve("bar") };
+  const output = await quickDecode(encode(input));
+  const { baz: bazResult, ...partialResult } = output;
+  const { baz: bazInput, ...partialInput } = input;
+
+  expect(partialResult).toEqual(partialInput);
+  expect(await bazResult).toEqual(await bazInput);
+
+  let encoded = "";
+  const stream = encode(input);
+  await stream.pipeThrough(new TextDecoderStream()).pipeTo(
+    new WritableStream({
+      write(chunk) {
+        encoded += chunk;
+      },
+    })
+  );
+
+  expect(Array.from(encoded.matchAll(/"foo"/g))).toHaveLength(1);
+  expect(Array.from(encoded.matchAll(/"bar"/g))).toHaveLength(1);
+  expect(Array.from(encoded.matchAll(/"baz"/g))).toHaveLength(1);
+});
+
 test("should encode and decode object with undefined", async () => {
   const input = { foo: undefined };
   const output = (await quickDecode(encode(input))) as typeof input;
