@@ -165,7 +165,7 @@ test("should encode and decode object", async () => {
 test("should encode and decode object and dedupe object key, value, and promise value", async () => {
   const input = { foo: "bar", bar: "bar", baz: Promise.resolve("bar") };
   const output = await quickDecode(encode(input));
-  const { baz: bazResult, ...partialResult } = output;
+  const { baz: bazResult, ...partialResult } = output as typeof input;
   const { baz: bazInput, ...partialInput } = input;
 
   expect(partialResult).toEqual(partialInput);
