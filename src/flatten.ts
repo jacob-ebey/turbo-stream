@@ -20,10 +20,7 @@ import {
   type ThisEncode,
 } from "./utils.js";
 
-export function flatten(
-  this: ThisEncode,
-  input: unknown
-): number | [number] {
+export function flatten(this: ThisEncode, input: unknown): number | [number] {
   const { indices } = this;
   const existing = indices.get(input);
   if (existing) return [existing];
@@ -148,8 +145,31 @@ function stringify(this: ThisEncode, input: unknown, index: number) {
       }
       break;
     }
-    default:
-      throw new Error("Cannot encode function or unexpected type");
+    default: {
+      const isArray = Array.isArray(input);
+      let pluginHandled = false;
+      if (!isArray && plugins) {
+        for (const plugin of plugins) {
+          const pluginResult = plugin(input);
+          if (Array.isArray(pluginResult)) {
+            pluginHandled = true;
+            const [pluginIdentifier, ...rest] = pluginResult;
+            str[index] = `[${JSON.stringify(pluginIdentifier)}`;
+            if (rest.length > 0) {
+              str[index] += `,${rest
+                .map((v) => flatten.call(this, v))
+                .join(",")}`;
+            }
+            str[index] += "]";
+            break;
+          }
+        }
+      }
+
+      if (!pluginHandled) {
+        throw new Error("Cannot encode function or unexpected type");
+      }
+    }
   }
 }
 

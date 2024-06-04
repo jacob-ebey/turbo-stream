@@ -343,6 +343,32 @@ test("should encode and decode custom type when nested alongside Promise", async
   expect(await decoded.value.promise).toBe("resolved");
 });
 
+test("should allow plugins to encode and decode functions", async () => {
+  const input = () => "foo";
+  const decoded = await decode(
+    encode(input, {
+      plugins: [
+        (value) => {
+          if (typeof value === "function") {
+            return ["Function"];
+          }
+        },
+      ],
+    }),
+    {
+      plugins: [
+        (type) => {
+          if (type === "Function") {
+            return { value: () => "foo" };
+          }
+        },
+      ],
+    }
+  );
+  expect(decoded.value).toBeInstanceOf(Function);
+  expect((decoded.value as typeof input)()).toBe("foo");
+});
+
 test("should propagate abort reason to deferred promises for sync resolved promise", async () => {
   const abortController = new AbortController();
   const reason = new Error("reason");
