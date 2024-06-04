@@ -165,7 +165,7 @@ test("should encode and decode object", async () => {
 test("should encode and decode object and dedupe object key, value, and promise value", async () => {
   const input = { foo: "bar", bar: "bar", baz: Promise.resolve("bar") };
   const output = await quickDecode(encode(input));
-  const { baz: bazResult, ...partialResult } = output;
+  const { baz: bazResult, ...partialResult } = output as typeof input;
   const { baz: bazInput, ...partialInput } = input;
 
   expect(partialResult).toEqual(partialInput);
@@ -341,6 +341,32 @@ test("should encode and decode custom type when nested alongside Promise", async
   expect(decoded.value.custom).toBeInstanceOf(Custom);
   expect(decoded.value.custom.foo).toBe("qux");
   expect(await decoded.value.promise).toBe("resolved");
+});
+
+test("should allow plugins to encode and decode functions", async () => {
+  const input = () => "foo";
+  const decoded = await decode(
+    encode(input, {
+      plugins: [
+        (value) => {
+          if (typeof value === "function") {
+            return ["Function"];
+          }
+        },
+      ],
+    }),
+    {
+      plugins: [
+        (type) => {
+          if (type === "Function") {
+            return { value: () => "foo" };
+          }
+        },
+      ],
+    }
+  );
+  expect(decoded.value).toBeInstanceOf(Function);
+  expect((decoded.value as typeof input)()).toBe("foo");
 });
 
 test("should propagate abort reason to deferred promises for sync resolved promise", async () => {
