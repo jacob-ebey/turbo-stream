@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.0](https://github.com/jacob-ebey/turbo-stream/compare/v2.1.0...v2.2.0) (2024-06-04)
+
+
+### Features
+
+* allow plugins to custom encode functions ([#34](https://github.com/jacob-ebey/turbo-stream/issues/34)) ([6bd197a](https://github.com/jacob-ebey/turbo-stream/commit/6bd197a258fa188c8ea4f8232531bf10f56c5d8d))
+
 ## [2.1.0](https://github.com/jacob-ebey/turbo-stream/compare/v2.0.1...v2.1.0) (2024-05-30)
 
 
