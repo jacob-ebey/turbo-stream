@@ -181,6 +181,8 @@ export function encode(
                         `${TYPE_PROMISE}${deferredId}:[["${TYPE_PREVIOUS_RESOLVED}",${id[0]}]]\n`
                       )
                     );
+                    encoder.index++;
+                    lastSentIndex++;
                   } else if (id < 0) {
                     controller.enqueue(
                       textEncoder.encode(`${TYPE_PROMISE}${deferredId}:${id}\n`)
@@ -213,6 +215,8 @@ export function encode(
                         `${TYPE_ERROR}${deferredId}:[["${TYPE_PREVIOUS_RESOLVED}",${id[0]}]]\n`
                       )
                     );
+                    encoder.index++;
+                    lastSentIndex++;
                   } else if (id < 0) {
                     controller.enqueue(
                       textEncoder.encode(`${TYPE_ERROR}${deferredId}:${id}\n`)
