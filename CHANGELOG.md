@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.2](https://github.com/jacob-ebey/turbo-stream/compare/v2.2.1...v2.2.2) (2024-08-10)
+
+
+### Bug Fixes
+
+* support "infinitely" large payloads ([#41](https://github.com/jacob-ebey/turbo-stream/issues/41)) ([8b602a3](https://github.com/jacob-ebey/turbo-stream/commit/8b602a33f15a914bba833123a32fcc6001ce846a))
+
 ## [2.2.1](https://github.com/jacob-ebey/turbo-stream/compare/v2.2.0...v2.2.1) (2024-08-09)
 
 
