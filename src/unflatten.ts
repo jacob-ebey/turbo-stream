@@ -45,112 +45,229 @@ export function unflatten(this: ThisDecode, parsed: unknown): unknown {
 function hydrate(this: ThisDecode, index: number): any {
   const { hydrated, values, deferred, plugins } = this;
 
-  switch (index) {
-    case UNDEFINED:
-      return;
-    case NULL:
-      return null;
-    case NAN:
-      return NaN;
-    case POSITIVE_INFINITY:
-      return Infinity;
-    case NEGATIVE_INFINITY:
-      return -Infinity;
-    case NEGATIVE_ZERO:
-      return -0;
-  }
+  let result: unknown;
+  const stack = [
+    [
+      index,
+      (v: unknown) => {
+        result = v;
+      },
+    ] as const,
+  ];
 
-  if (hydrated[index]) return hydrated[index];
+  let postRun: Array<() => void> = [];
 
-  const value = values[index];
-  if (!value || typeof value !== "object") return (hydrated[index] = value);
+  while (stack.length > 0) {
+    const [index, set] = stack.pop()!;
 
-  if (Array.isArray(value)) {
-    if (typeof value[0] === "string") {
-      const [type, b, c] = value;
-      switch (type) {
-        case TYPE_DATE:
-          return (hydrated[index] = new Date(b));
-        case TYPE_URL:
-          return (hydrated[index] = new URL(b));
-        case TYPE_BIGINT:
-          return (hydrated[index] = BigInt(b));
-        case TYPE_REGEXP:
-          return (hydrated[index] = new RegExp(b, c));
-        case TYPE_SYMBOL:
-          return (hydrated[index] = Symbol.for(b));
-        case TYPE_SET:
-          const set = new Set();
-          hydrated[index] = set;
-          for (let i = 1; i < value.length; i++)
-            set.add(hydrate.call(this, value[i]));
-          return set;
-        case TYPE_MAP:
-          const map = new Map();
-          hydrated[index] = map;
-          for (let i = 1; i < value.length; i += 2) {
-            map.set(
-              hydrate.call(this, value[i]),
-              hydrate.call(this, value[i + 1])
-            );
-          }
-          return map;
-        case TYPE_NULL_OBJECT:
-          const obj = Object.create(null);
-          hydrated[index] = obj;
-          for (const key in b)
-            obj[hydrate.call(this, Number(key))] = hydrate.call(this, b[key]);
-          return obj;
-        case TYPE_PROMISE:
-          if (hydrated[b]) {
-            return (hydrated[index] = hydrated[b]);
-          } else {
-            const d = new Deferred();
-            deferred[b] = d;
-            return (hydrated[index] = d.promise);
-          }
-        case TYPE_ERROR:
-          const [, message, errorType] = value;
-          let error =
-            errorType && globalObj && globalObj[errorType]
-              ? new globalObj[errorType](message)
-              : new Error(message);
-          hydrated[index] = error;
-          return error;
-        case TYPE_PREVIOUS_RESOLVED:
-          return hydrate.call(this, b);
-        default:
-          // Run plugins at the end so we have a chance to resolve primitives
-          // without running into a loop
-          if (Array.isArray(plugins)) {
-            const args = value.slice(1).map((i) => hydrate.call(this, i));
-            for (const plugin of plugins) {
-              const result = plugin(value[0], ...args);
-              if (result) return (hydrated[index] = result.value);
+    switch (index) {
+      case UNDEFINED:
+        set(undefined);
+        continue;
+      case NULL:
+        set(null);
+        continue;
+      case NAN:
+        set(NaN);
+        continue;
+      case POSITIVE_INFINITY:
+        set(Infinity);
+        continue;
+      case NEGATIVE_INFINITY:
+        set(-Infinity);
+        continue;
+      case NEGATIVE_ZERO:
+        set(-0);
+        continue;
+    }
+
+    if (hydrated[index]) {
+      set(hydrated[index]);
+      continue;
+    }
+
+    const value = values[index];
+    if (!value || typeof value !== "object") {
+      hydrated[index] = value;
+      set(value);
+      continue;
+    }
+
+    if (Array.isArray(value)) {
+      if (typeof value[0] === "string") {
+        const [type, b, c] = value;
+        switch (type) {
+          case TYPE_DATE:
+            set((hydrated[index] = new Date(b)));
+            continue;
+          case TYPE_URL:
+            set((hydrated[index] = new URL(b)));
+            continue;
+          case TYPE_BIGINT:
+            set((hydrated[index] = BigInt(b)));
+            continue;
+          case TYPE_REGEXP:
+            set((hydrated[index] = new RegExp(b, c)));
+            continue;
+          case TYPE_SYMBOL:
+            set((hydrated[index] = Symbol.for(b)));
+            continue;
+          case TYPE_SET:
+            const newSet = new Set();
+            hydrated[index] = newSet;
+            for (let i = 1; i < value.length; i++)
+              stack.push([
+                value[i],
+                (v) => {
+                  newSet.add(v);
+                },
+              ]);
+            set(newSet);
+            continue;
+          case TYPE_MAP:
+            const map = new Map();
+            hydrated[index] = map;
+            for (let i = 1; i < value.length; i += 2) {
+              const r: any[] = [];
+              stack.push([
+                value[i + 1],
+                (v) => {
+                  r[1] = v;
+                },
+              ]);
+              stack.push([
+                value[i],
+                (k) => {
+                  r[0] = k;
+                },
+              ]);
+              postRun.push(() => {
+                map.set(r[0], r[1]);
+              });
             }
+            set(map);
+            continue;
+          case TYPE_NULL_OBJECT:
+            const obj = Object.create(null);
+            hydrated[index] = obj;
+            for (const key in b) {
+              const r: any[] = [];
+              stack.push([
+                b[key],
+                (v) => {
+                  r[1] = v;
+                },
+              ]);
+              stack.push([
+                Number(key),
+                (k) => {
+                  r[0] = k;
+                },
+              ]);
+              postRun.push(() => {
+                obj[r[0]] = r[1];
+              });
+            }
+            set(obj);
+            continue;
+          case TYPE_PROMISE:
+            if (hydrated[b]) {
+              set((hydrated[index] = hydrated[b]));
+            } else {
+              const d = new Deferred();
+              deferred[b] = d;
+              set((hydrated[index] = d.promise));
+            }
+            continue;
+          case TYPE_ERROR:
+            const [, message, errorType] = value;
+            let error =
+              errorType && globalObj && globalObj[errorType]
+                ? new globalObj[errorType](message)
+                : new Error(message);
+            hydrated[index] = error;
+            set(error);
+            continue;
+          case TYPE_PREVIOUS_RESOLVED:
+            set((hydrated[index] = hydrated[b]));
+            continue;
+          default:
+            // Run plugins at the end so we have a chance to resolve primitives
+            // without running into a loop
+            if (Array.isArray(plugins)) {
+              const r: unknown[] = [];
+              const vals = value.slice(1);
+              for (let i = 0; i < vals.length; i++) {
+                const v = vals[i];
+                stack.push([
+                  v,
+                  (v) => {
+                    r[i] = v;
+                  },
+                ]);
+              }
+              postRun.push(() => {
+                for (const plugin of plugins) {
+                  const result = plugin(value[0], ...r);
+                  if (result) {
+                    set((hydrated[index] = result.value));
+                    return;
+                  }
+                }
+                throw new SyntaxError();
+              });
+              continue;
+            }
+            throw new SyntaxError();
+        }
+      } else {
+        const array: unknown[] = [];
+        hydrated[index] = array;
+
+        for (let i = 0; i < value.length; i++) {
+          const n = value[i];
+          if (n !== HOLE) {
+            stack.push([
+              n,
+              (v) => {
+                array[i] = v;
+              },
+            ]);
           }
-          throw new SyntaxError();
+        }
+        set(array);
+        continue;
       }
     } else {
-      const array: unknown[] = [];
-      hydrated[index] = array;
+      const object: Record<string, unknown> = {};
+      hydrated[index] = object;
 
-      for (let i = 0; i < value.length; i++) {
-        const n = value[i];
-        if (n !== HOLE) array[i] = hydrate.call(this, n);
+      for (const key in value) {
+        const r: any[] = [];
+        stack.push([
+          (value as Record<string, number>)[key],
+          (v) => {
+            r[1] = v;
+          },
+        ]);
+        stack.push([
+          Number(key),
+          (k) => {
+            r[0] = k;
+          },
+        ]);
+        postRun.push(() => {
+          object[r[0]] = r[1];
+        });
       }
-      return array;
+      set(object);
+      continue;
     }
-  } else {
-    const object: Record<string, unknown> = {};
-    hydrated[index] = object;
-
-    for (const key in value) {
-      object[hydrate.call(this, Number(key))] = hydrate.call(
-        this,
-        (value as Record<string, number>)[key]
-      );
-    }
-    return object;
   }
+
+  while (postRun.length > 0) {
+    postRun.pop()!();
+  }
+
+  return result;
 }
