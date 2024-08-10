@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.1](https://github.com/jacob-ebey/turbo-stream/compare/v2.2.0...v2.2.1) (2024-08-09)
+
+
+### Bug Fixes
+
+* encoding of previously-used values ([#38](https://github.com/jacob-ebey/turbo-stream/issues/38)) ([84520be](https://github.com/jacob-ebey/turbo-stream/commit/84520be9a84223ee74dc49e32f3c5fe047c5eb78))
+
 ## [2.2.0](https://github.com/jacob-ebey/turbo-stream/compare/v2.1.0...v2.2.0) (2024-06-04)
 
 
