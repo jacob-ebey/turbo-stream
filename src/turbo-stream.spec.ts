@@ -162,6 +162,19 @@ test("should encode and decode object", async () => {
   expect(output).toEqual(input);
 });
 
+test("should encode and decode large payload", async () => {
+  const input: unknown[] = [];
+  for (let i = 0; i < 10000; i++) {
+    input.push({
+      [Math.random().toString(36).slice(2)]: Math.random()
+        .toString(36)
+        .slice(2),
+    });
+  }
+  const output = await quickDecode(encode(input));
+  expect(output).toEqual(input);
+});
+
 test("should encode and decode object and dedupe object key, value, and promise value", async () => {
   const input = { foo: "bar", bar: "bar", baz: Promise.resolve("bar") };
   const output = await quickDecode(encode(input));
@@ -421,9 +434,9 @@ test("should encode and decode objects with multiple promises resolving to the s
 
 test("should encode and decode objects with reused values", async () => {
   const input = {
-    foo: Promise.resolve({ use: 'baz' }),
-    bar: Promise.resolve('baz'),
-    data: Promise.resolve({ quux: 'quux' }),
+    foo: Promise.resolve({ use: "baz" }),
+    bar: Promise.resolve("baz"),
+    data: Promise.resolve({ quux: "quux" }),
   };
 
   const decoded = await decode(encode(input));
