@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.3](https://github.com/jacob-ebey/turbo-stream/compare/v2.2.2...v2.2.3) (2024-08-11)
+
+
+### Bug Fixes
+
+* push one value at a time to avoid stack overflows ([#43](https://github.com/jacob-ebey/turbo-stream/issues/43)) ([88c51a7](https://github.com/jacob-ebey/turbo-stream/commit/88c51a7f4a1803c12570bf325fdfc8ec9578e3f5))
+
 ## [2.2.2](https://github.com/jacob-ebey/turbo-stream/compare/v2.2.1...v2.2.2) (2024-08-10)
 
 
