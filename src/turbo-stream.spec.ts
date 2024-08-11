@@ -164,7 +164,7 @@ test("should encode and decode object", async () => {
 
 test("should encode and decode large payload", async () => {
   const input: unknown[] = [];
-  for (let i = 0; i < 10000; i++) {
+  for (let i = 0; i < 100000; i++) {
     input.push({
       [Math.random().toString(36).slice(2)]: Math.random()
         .toString(36)
