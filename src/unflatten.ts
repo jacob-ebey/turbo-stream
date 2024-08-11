@@ -36,7 +36,9 @@ export function unflatten(this: ThisDecode, parsed: unknown): unknown {
   if (!Array.isArray(parsed) || !parsed.length) throw new SyntaxError();
 
   const startIndex = values.length;
-  values.push(...parsed);
+  for (const value of parsed) {
+    values.push(value);
+  }
   hydrated.length = values.length;
 
   return hydrate.call(this, startIndex);
