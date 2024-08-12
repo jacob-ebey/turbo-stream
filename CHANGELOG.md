@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.3.0](https://github.com/jacob-ebey/turbo-stream/compare/v2.2.3...v2.3.0) (2024-08-12)
+
+
+### Features
+
+* maintain property order ([#45](https://github.com/jacob-ebey/turbo-stream/issues/45)) ([f0f1537](https://github.com/jacob-ebey/turbo-stream/commit/f0f1537315bd25793ad8ebc749e95c7ad2dd1fa4))
+
 ## [2.2.3](https://github.com/jacob-ebey/turbo-stream/compare/v2.2.2...v2.2.3) (2024-08-11)
 
 
