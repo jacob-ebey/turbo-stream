@@ -184,7 +184,7 @@ test("should encode and decode object maintaining property order for re-used key
   expect(JSON.stringify(output)).toEqual(JSON.stringify(input));
 });
 
-test("should encode and decode object maintaining property order for re-used keys", async () => {
+test("should encode and decode null prototype object maintaining property order for re-used keys", async () => {
   const input = Object.create(null);
   const test1 = Object.create(null);
   test1.a = "a value 1";
