@@ -152,7 +152,7 @@ function hydrate(this: ThisDecode, index: number): any {
           case TYPE_NULL_OBJECT:
             const obj = Object.create(null);
             hydrated[index] = obj;
-            for (const key in b) {
+            for (const key of Object.keys(b).reverse()) {
               const r: any[] = [];
               stack.push([
                 b[key],
@@ -161,7 +161,7 @@ function hydrate(this: ThisDecode, index: number): any {
                 },
               ]);
               stack.push([
-                Number(key),
+                Number(key.slice(1)),
                 (k) => {
                   r[0] = k;
                 },
@@ -244,7 +244,7 @@ function hydrate(this: ThisDecode, index: number): any {
       const object: Record<string, unknown> = {};
       hydrated[index] = object;
 
-      for (const key in value) {
+      for (const key of Object.keys(value).reverse()) {
         const r: any[] = [];
         stack.push([
           (value as Record<string, number>)[key],
@@ -253,7 +253,7 @@ function hydrate(this: ThisDecode, index: number): any {
           },
         ]);
         stack.push([
-          Number(key),
+          Number(key.slice(1)),
           (k) => {
             r[0] = k;
           },

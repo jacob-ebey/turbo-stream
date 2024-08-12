@@ -175,6 +175,30 @@ test("should encode and decode large payload", async () => {
   expect(output).toEqual(input);
 });
 
+test("should encode and decode object maintaining property order for re-used keys", async () => {
+  const input = [
+    { a: "a value 1", b: "b value" },
+    { c: "c value", a: "a value 2" },
+  ];
+  const output = await quickDecode(encode(input));
+  expect(JSON.stringify(output)).toEqual(JSON.stringify(input));
+});
+
+test("should encode and decode object maintaining property order for re-used keys", async () => {
+  const input = Object.create(null);
+  const test1 = Object.create(null);
+  test1.a = "a value 1";
+  test1.b = "b value";
+  input.test1 = test1;
+  const test2 = Object.create(null);
+  test2.c = "c value";
+  test2.a = "a value 2";
+  input.test2 = test2;
+
+  const output = await quickDecode(encode(input));
+  expect(JSON.stringify(output)).toEqual(JSON.stringify(input));
+});
+
 test("should encode and decode object and dedupe object key, value, and promise value", async () => {
   const input = { foo: "bar", bar: "bar", baz: Promise.resolve("bar") };
   const output = await quickDecode(encode(input));

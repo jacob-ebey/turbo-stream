@@ -48,7 +48,7 @@ function stringify(this: ThisEncode, input: unknown, index: number) {
 
     const partsForObj = (obj: any) =>
       Object.keys(obj)
-        .map((k) => `"${flatten.call(this, k)}":${flatten.call(this, obj[k])}`)
+        .map((k) => `"_${flatten.call(this, k)}":${flatten.call(this, obj[k])}`)
         .join(",");
 
     switch (typeof input) {
