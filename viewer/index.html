@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/@exampledev/new.css@1.1.3/new.css"
+    />
+    <link rel="modulepreload" href="/scripts/turbo-stream.js" as="script" />
+    <title>turbo-stream</title>
+    <meta name="description" content="Decode Turbo Streams" />
+
+    <script>
+      const DEFAULT_PAYLOAD =
+        `
+          [{"_1":2,"_2":2,"_3":4},"foo","bar","baz",["P",4]]
+          P4:[["Z",2]]
+        `
+          .trim()
+          .replace(/^ {10}/gm, "") + "\n";
+      const DEFAULT_DECODE_CALLBACK =
+        `
+          // Check the console for the decoded value
+          console.log("Decoded", decoded.value);
+          await decoded.done;
+        `
+          .trim()
+          .replace(/^ {10}/gm, "") + "\n";
+    </script>
+  </head>
+  <body>
+    <header>
+      <h1>turbo-stream</h1>
+      <nav>
+        <a href="/">Home</a> /
+        <a href="https://github.com/jacob-ebey/turbo-stream">GitHub</a> /
+        <a href="https://www.npmjs.com/package/turbo-stream">NPM</a>
+      </nav>
+    </header>
+
+    <form id="decodeForm" method="POST">
+      <fieldset>
+        <legend>Decode</legend>
+        <textarea
+          id="toDecode"
+          cols="30"
+          rows="10"
+          style="width: 100%"
+        ></textarea>
+        <script>
+          document.currentScript.previousElementSibling.value = DEFAULT_PAYLOAD;
+        </script>
+        <textarea
+          id="decodeCallback"
+          cols="30"
+          rows="5"
+          style="width: 100%"
+        ></textarea>
+        <script>
+          document.currentScript.previousElementSibling.value =
+            DEFAULT_DECODE_CALLBACK;
+        </script>
+        <button type="submit">Decode</button>
+        <button type="reset">Reset</button>
+      </fieldset>
+    </form>
+
+    <script type="module">
+      import { decode, encode } from "/scripts/turbo-stream.js";
+      console.log({ decode, encode });
+      const decodeForm = document.getElementById("decodeForm");
+      decodeForm.addEventListener("reset", (event) => {
+        event.preventDefault();
+        document.getElementById("toDecode").value = DEFAULT_PAYLOAD;
+        document.getElementById("decodeCallback").value =
+          DEFAULT_DECODE_CALLBACK;
+      });
+
+      decodeForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+
+        const toDecode = document.getElementById("toDecode").value;
+        const decodeCallback = document.getElementById("decodeCallback").value;
+
+        const toDecodeStream = new ReadableStream({
+          start(controller) {
+            controller.enqueue(new TextEncoder().encode(toDecode));
+            controller.close();
+          },
+        });
+
+        const decoded = await decode(toDecodeStream);
+        try {
+          await eval(`(async () => {${decodeCallback}})()`);
+        } catch (error) {
+          console.error(error);
+        }
+      });
+    </script>
+  </body>
+</html>
