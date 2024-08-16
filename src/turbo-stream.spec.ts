@@ -404,6 +404,35 @@ test("should allow plugins to encode and decode functions", async () => {
   );
   expect(decoded.value).toBeInstanceOf(Function);
   expect((decoded.value as typeof input)()).toBe("foo");
+  await decoded.done;
+});
+
+test("should allow postPlugins to handle values that would otherwise throw", async () => {
+  class Class {}
+  const input = {
+    func: () => null,
+    class: new Class(),
+  };
+  const decoded = await decode(
+    encode(input, {
+      postPlugins: [
+        (value) => {
+          return ["u"];
+        },
+      ],
+    }),
+    {
+      plugins: [
+        (type) => {
+          if (type === "u") {
+            return { value: undefined };
+          }
+        },
+      ],
+    }
+  );
+  expect(decoded.value).toEqual({ func: undefined, class: undefined });
+  await decoded.done;
 });
 
 test("should propagate abort reason to deferred promises for sync resolved promise", async () => {

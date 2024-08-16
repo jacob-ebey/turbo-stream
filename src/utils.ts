@@ -40,6 +40,7 @@ export interface ThisEncode {
   stringified: string[];
   deferred: Record<number, Promise<unknown>>;
   plugins?: EncodePlugin[];
+  postPlugins?: EncodePlugin[];
   signal?: AbortSignal;
 }
 
