@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.4.0](https://github.com/jacob-ebey/turbo-stream/compare/v2.3.0...v2.4.0) (2024-08-17)
+
+
+### Features
+
+* add `postPlugins` for encode to handle any values that can not be handled natively or by other plugins ([#47](https://github.com/jacob-ebey/turbo-stream/issues/47)) ([5fc83c8](https://github.com/jacob-ebey/turbo-stream/commit/5fc83c8bb32407ec44767e55f6cecb950dc5b0e1))
+
 ## [2.3.0](https://github.com/jacob-ebey/turbo-stream/compare/v2.2.3...v2.3.0) (2024-08-12)
 
 
