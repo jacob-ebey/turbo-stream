@@ -134,9 +134,13 @@ async function decodeDeferred(
 
 export function encode(
   input: unknown,
-  options?: { plugins?: EncodePlugin[]; signal?: AbortSignal }
+  options?: {
+    plugins?: EncodePlugin[];
+    postPlugins?: EncodePlugin[];
+    signal?: AbortSignal;
+  }
 ) {
-  const { plugins, signal } = options ?? {};
+  const { plugins, postPlugins, signal } = options ?? {};
 
   const encoder: ThisEncode = {
     deferred: {},
@@ -144,6 +148,7 @@ export function encode(
     indices: new Map(),
     stringified: [],
     plugins,
+    postPlugins,
     signal,
   };
   const textEncoder = new TextEncoder();

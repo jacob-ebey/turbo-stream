@@ -39,7 +39,7 @@ export function flatten(this: ThisEncode, input: unknown): number | [number] {
 }
 
 function stringify(this: ThisEncode, input: unknown, index: number) {
-  const { deferred, plugins } = this;
+  const { deferred, plugins, postPlugins } = this;
   const str = this.stringified;
 
   const stack: [unknown, number][] = [[input, index]];
@@ -50,6 +50,7 @@ function stringify(this: ThisEncode, input: unknown, index: number) {
       Object.keys(obj)
         .map((k) => `"_${flatten.call(this, k)}":${flatten.call(this, obj[k])}`)
         .join(",");
+    let error: Error | null = null;
 
     switch (typeof input) {
       case "boolean":
@@ -62,11 +63,13 @@ function stringify(this: ThisEncode, input: unknown, index: number) {
         break;
       case "symbol": {
         const keyFor = Symbol.keyFor(input);
-        if (!keyFor)
-          throw new Error(
+        if (!keyFor) {
+          error = new Error(
             "Cannot encode symbol unless created with Symbol.for()"
           );
-        str[index] = `["${TYPE_SYMBOL}",${JSON.stringify(keyFor)}]`;
+        } else {
+          str[index] = `["${TYPE_SYMBOL}",${JSON.stringify(keyFor)}]`;
+        }
         break;
       }
       case "object": {
@@ -144,7 +147,7 @@ function stringify(this: ThisEncode, input: unknown, index: number) {
           } else if (isPlainObject(input)) {
             str[index] = `{${partsForObj(input)}}`;
           } else {
-            throw new Error("Cannot encode object with prototype");
+            error = new Error("Cannot encode object with prototype");
           }
         }
         break;
@@ -171,8 +174,34 @@ function stringify(this: ThisEncode, input: unknown, index: number) {
         }
 
         if (!pluginHandled) {
-          throw new Error("Cannot encode function or unexpected type");
+          error = new Error("Cannot encode function or unexpected type");
         }
+      }
+    }
+
+    if (error) {
+      let pluginHandled = false;
+
+      if (postPlugins) {
+        for (const plugin of postPlugins) {
+          const pluginResult = plugin(input);
+          if (Array.isArray(pluginResult)) {
+            pluginHandled = true;
+            const [pluginIdentifier, ...rest] = pluginResult;
+            str[index] = `[${JSON.stringify(pluginIdentifier)}`;
+            if (rest.length > 0) {
+              str[index] += `,${rest
+                .map((v) => flatten.call(this, v))
+                .join(",")}`;
+            }
+            str[index] += "]";
+            break;
+          }
+        }
+      }
+
+      if (!pluginHandled) {
+        throw error;
       }
     }
   }
