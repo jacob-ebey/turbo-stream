@@ -65,7 +65,7 @@ async function decodeInitial(
     throw new SyntaxError();
   }
 
-  let line;
+  let line: unknown;
   try {
     line = JSON.parse(read.value);
   } catch (reason) {
@@ -95,7 +95,7 @@ async function decodeDeferred(
           throw new Error(`Deferred ID ${deferredId} not found in stream`);
         }
         const lineData = line.slice(colonIndex + 1);
-        let jsonLine;
+        let jsonLine: unknown;
         try {
           jsonLine = JSON.parse(lineData);
         } catch (reason) {
@@ -115,7 +115,7 @@ async function decodeDeferred(
           throw new Error(`Deferred ID ${deferredId} not found in stream`);
         }
         const lineData = line.slice(colonIndex + 1);
-        let jsonLine;
+        let jsonLine: unknown;
         try {
           jsonLine = JSON.parse(lineData);
         } catch (reason) {
@@ -169,82 +169,106 @@ export function encode(
       }
 
       const seenPromises = new WeakSet<Promise<unknown>>();
-      while (Object.keys(encoder.deferred).length > 0) {
-        for (const [deferredId, deferred] of Object.entries(encoder.deferred)) {
-          if (seenPromises.has(deferred)) continue;
-          seenPromises.add(
-            (encoder.deferred[Number(deferredId)] = raceSignal(
-              deferred,
-              encoder.signal
-            )
-              .then(
-                (resolved) => {
-                  const id = flatten.call(encoder, resolved);
-                  if (Array.isArray(id)) {
-                    controller.enqueue(
-                      textEncoder.encode(
-                        `${TYPE_PROMISE}${deferredId}:[["${TYPE_PREVIOUS_RESOLVED}",${id[0]}]]\n`
-                      )
-                    );
-                    encoder.index++;
-                    lastSentIndex++;
-                  } else if (id < 0) {
-                    controller.enqueue(
-                      textEncoder.encode(`${TYPE_PROMISE}${deferredId}:${id}\n`)
-                    );
-                  } else {
-                    const values = encoder.stringified
-                      .slice(lastSentIndex + 1)
-                      .join(",");
-                    controller.enqueue(
-                      textEncoder.encode(
-                        `${TYPE_PROMISE}${deferredId}:[${values}]\n`
-                      )
-                    );
-                    lastSentIndex = encoder.stringified.length - 1;
-                  }
-                },
-                (reason) => {
-                  if (
-                    !reason ||
-                    typeof reason !== "object" ||
-                    !(reason instanceof Error)
-                  ) {
-                    reason = new Error("An unknown error occurred");
-                  }
+      if (Object.keys(encoder.deferred).length) {
+        let raceDone!: () => void;
+        const racePromise = new Promise<never>((resolve, reject) => {
+          raceDone = resolve as () => void;
+          if (signal) {
+            const rejectPromise = () =>
+              reject(signal.reason || new Error("Signal was aborted."));
+            if (signal.aborted) {
+              rejectPromise();
+            } else {
+              signal.addEventListener("abort", (event) => {
+                rejectPromise();
+              });
+            }
+          }
+        });
+        while (Object.keys(encoder.deferred).length > 0) {
+          for (const [deferredId, deferred] of Object.entries(
+            encoder.deferred
+          )) {
+            if (seenPromises.has(deferred)) continue;
+            seenPromises.add(
+              // biome-ignore lint/suspicious/noAssignInExpressions: <explanation>
+              (encoder.deferred[Number(deferredId)] = Promise.race([
+                racePromise,
+                deferred,
+              ])
+                .then(
+                  (resolved) => {
+                    const id = flatten.call(encoder, resolved);
+                    if (Array.isArray(id)) {
+                      controller.enqueue(
+                        textEncoder.encode(
+                          `${TYPE_PROMISE}${deferredId}:[["${TYPE_PREVIOUS_RESOLVED}",${id[0]}]]\n`
+                        )
+                      );
+                      encoder.index++;
+                      lastSentIndex++;
+                    } else if (id < 0) {
+                      controller.enqueue(
+                        textEncoder.encode(
+                          `${TYPE_PROMISE}${deferredId}:${id}\n`
+                        )
+                      );
+                    } else {
+                      const values = encoder.stringified
+                        .slice(lastSentIndex + 1)
+                        .join(",");
+                      controller.enqueue(
+                        textEncoder.encode(
+                          `${TYPE_PROMISE}${deferredId}:[${values}]\n`
+                        )
+                      );
+                      lastSentIndex = encoder.stringified.length - 1;
+                    }
+                  },
+                  (reason) => {
+                    if (
+                      !reason ||
+                      typeof reason !== "object" ||
+                      !(reason instanceof Error)
+                    ) {
+                      reason = new Error("An unknown error occurred");
+                    }
 
-                  const id = flatten.call(encoder, reason);
-                  if (Array.isArray(id)) {
-                    controller.enqueue(
-                      textEncoder.encode(
-                        `${TYPE_ERROR}${deferredId}:[["${TYPE_PREVIOUS_RESOLVED}",${id[0]}]]\n`
-                      )
-                    );
-                    encoder.index++;
-                    lastSentIndex++;
-                  } else if (id < 0) {
-                    controller.enqueue(
-                      textEncoder.encode(`${TYPE_ERROR}${deferredId}:${id}\n`)
-                    );
-                  } else {
-                    const values = encoder.stringified
-                      .slice(lastSentIndex + 1)
-                      .join(",");
-                    controller.enqueue(
-                      textEncoder.encode(
-                        `${TYPE_ERROR}${deferredId}:[${values}]\n`
-                      )
-                    );
-                    lastSentIndex = encoder.stringified.length - 1;
+                    const id = flatten.call(encoder, reason);
+                    if (Array.isArray(id)) {
+                      controller.enqueue(
+                        textEncoder.encode(
+                          `${TYPE_ERROR}${deferredId}:[["${TYPE_PREVIOUS_RESOLVED}",${id[0]}]]\n`
+                        )
+                      );
+                      encoder.index++;
+                      lastSentIndex++;
+                    } else if (id < 0) {
+                      controller.enqueue(
+                        textEncoder.encode(`${TYPE_ERROR}${deferredId}:${id}\n`)
+                      );
+                    } else {
+                      const values = encoder.stringified
+                        .slice(lastSentIndex + 1)
+                        .join(",");
+                      controller.enqueue(
+                        textEncoder.encode(
+                          `${TYPE_ERROR}${deferredId}:[${values}]\n`
+                        )
+                      );
+                      lastSentIndex = encoder.stringified.length - 1;
+                    }
                   }
-                }
-              )
-              .finally(() => {
-                delete encoder.deferred[Number(deferredId)];
-              }))
-          );
+                )
+                .finally(() => {
+                  delete encoder.deferred[Number(deferredId)];
+                }))
+            );
+          }
+          await Promise.race(Object.values(encoder.deferred));
         }
-        await Promise.race(Object.values(encoder.deferred));
+
+        raceDone();
       }
       await Promise.all(Object.values(encoder.deferred));
 
@@ -253,19 +277,4 @@ export function encode(
   });
 
   return readable;
-}
-
-function raceSignal(promise: Promise<unknown>, signal?: AbortSignal) {
-  if (!signal) return promise;
-  if (signal.aborted)
-    return Promise.reject(signal.reason || new Error("Signal was aborted."));
-
-  const abort = new Promise<unknown>((resolve, reject) => {
-    signal.addEventListener("abort", (event) => {
-      reject(signal.reason || new Error("Signal was aborted."));
-    });
-    promise.then(resolve).catch(reject);
-  });
-  abort.catch(() => {});
-  return Promise.race([abort, promise]);
 }
