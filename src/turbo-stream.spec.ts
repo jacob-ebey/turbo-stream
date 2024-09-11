@@ -56,6 +56,12 @@ test("should encode and decode NaN", async () => {
   expect(output).toEqual(input);
 });
 
+test("should encode and decode Number.NaN", async () => {
+  const input = Number.NaN;
+  const output = await quickDecode(encode(input));
+  expect(output).toEqual(input);
+});
+
 test("should encode and decode Infinity", async () => {
   const input = Infinity;
   const output = await quickDecode(encode(input));
@@ -545,4 +551,24 @@ test("should encode and decode objects with multiple promises rejecting to the s
     })
   );
   expect(Array.from(encoded.matchAll(/"baz"/g))).toHaveLength(1);
+});
+
+test("should allow many nested promises without a memory leak", async () => {
+  const depth = 2000;
+  type Nested = { i: number; next: Promise<Nested> | null };
+  const input: Nested = { i: 0, next: null };
+  let current: Nested = input;
+  for (let i = 1; i < depth; i++) {
+    const next = { i, next: null };
+    current.next = Promise.resolve(next);
+    current = next;
+  }
+
+  const decoded = await decode(encode(input));
+  let currentDecoded: Nested = decoded.value as Nested;
+  while (currentDecoded.next) {
+    currentDecoded = await currentDecoded.next;
+  }
+  expect(currentDecoded.i).toBe(depth - 1);
+  await decoded.done;
 });
