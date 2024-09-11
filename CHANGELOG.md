@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.4.1](https://github.com/jacob-ebey/turbo-stream/compare/v2.4.0...v2.4.1) (2024-09-11)
+
+
+### Bug Fixes
+
+* address memory leak caused by too many event listeners on AbortSignal ([#49](https://github.com/jacob-ebey/turbo-stream/issues/49)) ([628504e](https://github.com/jacob-ebey/turbo-stream/commit/628504e1b344b6f6e5fdcfb0258524a518c13505))
+
 ## [2.4.0](https://github.com/jacob-ebey/turbo-stream/compare/v2.3.0...v2.4.0) (2024-08-17)
 
 
