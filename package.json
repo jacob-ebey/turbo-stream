@@ -1,6 +1,6 @@
 {
   "name": "turbo-stream",
-  "version": "2.4.0",
+  "version": "2.4.1",
   "description": "A streaming data transport format that aims to support built-in features such as Promises, Dates, RegExps, Maps, Sets and more.",
   "files": [
     "dist",
