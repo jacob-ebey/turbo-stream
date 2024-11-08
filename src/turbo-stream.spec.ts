@@ -3,7 +3,6 @@ import { expect } from "expect";
 
 import { decode, encode } from "./turbo-stream.js";
 import { Deferred, type DecodePlugin, type EncodePlugin } from "./utils.js";
-import { text } from "node:stream/consumers";
 
 async function quickDecode(stream: ReadableStream<Uint8Array>) {
   const decoded = await decode(stream);
@@ -574,7 +573,7 @@ test("should allow many nested promises without a memory leak", async () => {
   await decoded.done;
 });
 
-test.describe.only("ReadableStream", () => {
+test.describe("ReadableStream", () => {
   test("basic usage", async () => {
     const input = new ReadableStream({
       start(controller) {
