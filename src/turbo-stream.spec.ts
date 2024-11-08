@@ -3,6 +3,7 @@ import { expect } from "expect";
 
 import { decode, encode } from "./turbo-stream.js";
 import { Deferred, type DecodePlugin, type EncodePlugin } from "./utils.js";
+import { text } from "node:stream/consumers";
 
 async function quickDecode(stream: ReadableStream<Uint8Array>) {
   const decoded = await decode(stream);
@@ -571,4 +572,197 @@ test("should allow many nested promises without a memory leak", async () => {
   }
   expect(currentDecoded.i).toBe(depth - 1);
   await decoded.done;
+});
+
+test.describe.only("ReadableStream", () => {
+  test("basic usage", async () => {
+    const input = new ReadableStream({
+      start(controller) {
+        controller.enqueue("foo");
+        controller.enqueue("bar");
+        setTimeout(() => {
+          controller.enqueue("foo");
+          controller.enqueue({ loba: "boba" });
+          controller.close();
+        }, 10);
+      },
+    });
+
+    const decoded = await decode(encode(input));
+
+    const inputReader = input.getReader();
+    const decodedReader = (decoded.value as typeof input).getReader();
+
+    {
+      const inputValue = await inputReader.read();
+      const decodedValue = await decodedReader.read();
+      expect(inputValue).toEqual(decodedValue);
+      expect(inputValue).toEqual({ value: "foo", done: false });
+    }
+    {
+      const inputValue = await inputReader.read();
+      const decodedValue = await decodedReader.read();
+      expect(inputValue).toEqual(decodedValue);
+      expect(inputValue).toEqual({ value: "bar", done: false });
+    }
+    {
+      const inputValue = await inputReader.read();
+      const decodedValue = await decodedReader.read();
+      expect(inputValue).toEqual(decodedValue);
+      expect(inputValue).toEqual({ value: "foo", done: false });
+    }
+    {
+      const inputValue = await inputReader.read();
+      const decodedValue = await decodedReader.read();
+      expect(inputValue).toEqual(decodedValue);
+      expect(inputValue).toEqual({ value: { loba: "boba" }, done: false });
+    }
+    {
+      const inputValue = await inputReader.read();
+      const decodedValue = await decodedReader.read();
+      expect(inputValue).toEqual(decodedValue);
+      expect(inputValue).toEqual({ value: undefined, done: true });
+    }
+    {
+      const inputValue = await inputReader.closed;
+      const decodedValue = await decodedReader.closed;
+      expect(inputValue).toEqual(decodedValue);
+      expect(inputValue).toEqual(undefined);
+    }
+    await decoded.done;
+  });
+
+  test("errors", async () => {
+    const input = new ReadableStream({
+      start(controller) {
+        controller.enqueue("foo");
+        controller.enqueue("bar");
+        setTimeout(() => {
+          controller.enqueue("foo");
+          controller.enqueue({ loba: "boba" });
+          setTimeout(() => {
+            controller.error(new Error("baz"));
+          }, 1);
+        }, 10);
+      },
+    });
+
+    const decoded = await decode(encode(input));
+
+    const inputReader = input.getReader();
+    const decodedReader = (decoded.value as typeof input).getReader();
+
+    {
+      const inputValue = await inputReader.read();
+      const decodedValue = await decodedReader.read();
+      expect(inputValue).toEqual(decodedValue);
+      expect(inputValue).toEqual({ value: "foo", done: false });
+    }
+    {
+      const inputValue = await inputReader.read();
+      const decodedValue = await decodedReader.read();
+      expect(inputValue).toEqual(decodedValue);
+      expect(inputValue).toEqual({ value: "bar", done: false });
+    }
+    {
+      const inputValue = await inputReader.read();
+      const decodedValue = await decodedReader.read();
+      expect(inputValue).toEqual(decodedValue);
+      expect(inputValue).toEqual({ value: "foo", done: false });
+    }
+    {
+      const inputValue = await inputReader.read();
+      const decodedValue = await decodedReader.read();
+      expect(inputValue).toEqual(decodedValue);
+      expect(inputValue).toEqual({ value: { loba: "boba" }, done: false });
+    }
+    {
+      const expected = new Error("baz");
+      await expect(inputReader.closed).rejects.toEqual(expected);
+      await expect(decodedReader.closed).rejects.toEqual(expected);
+    }
+    await decoded.done;
+  });
+
+  test("streams in a stream", async () => {
+    const nested1 = new ReadableStream({
+      start(controller) {
+        controller.enqueue("a");
+        controller.enqueue("b");
+        controller.close();
+      },
+    });
+    const nested2 = new ReadableStream({
+      start(controller) {
+        controller.enqueue("1");
+        controller.enqueue("2");
+        controller.close();
+      },
+    });
+    const input = new ReadableStream({
+      start(controller) {
+        controller.enqueue(nested1);
+        controller.enqueue(nested2);
+        controller.close();
+      },
+    });
+
+    const decoded = await decode(encode(input));
+
+    const inputReader = input.getReader();
+    const decodedReader = (decoded.value as typeof input).getReader();
+    {
+      const inputValue = (await inputReader.read()).value as ReadableStream;
+      const decodedValue = (await decodedReader.read()).value as ReadableStream;
+      expect(inputValue).toBe(nested1);
+      const inputNestedReader = inputValue.getReader();
+      const decodedNestedReader = decodedValue.getReader();
+      {
+        const inputValue = await inputNestedReader.read();
+        const decodedValue = await decodedNestedReader.read();
+        expect(inputValue).toEqual(decodedValue);
+        expect(inputValue).toEqual({ value: "a", done: false });
+      }
+      {
+        const inputValue = await inputNestedReader.read();
+        const decodedValue = await decodedNestedReader.read();
+        expect(inputValue).toEqual(decodedValue);
+        expect(inputValue).toEqual({ value: "b", done: false });
+      }
+      {
+        const inputValue = await inputNestedReader.read();
+        const decodedValue = await decodedNestedReader.read();
+        expect(inputValue).toEqual(decodedValue);
+        expect(inputValue).toEqual({ value: undefined, done: true });
+      }
+    }
+
+    {
+      const inputValue = (await inputReader.read()).value as ReadableStream;
+      const decodedValue = (await decodedReader.read()).value as ReadableStream;
+      expect(inputValue).toBe(nested2);
+      const inputNestedReader = inputValue.getReader();
+      const decodedNestedReader = decodedValue.getReader();
+      {
+        const inputValue = await inputNestedReader.read();
+        const decodedValue = await decodedNestedReader.read();
+        expect(inputValue).toEqual(decodedValue);
+        expect(inputValue).toEqual({ value: "1", done: false });
+      }
+      {
+        const inputValue = await inputNestedReader.read();
+        const decodedValue = await decodedNestedReader.read();
+        expect(inputValue).toEqual(decodedValue);
+        expect(inputValue).toEqual({ value: "2", done: false });
+      }
+      {
+        const inputValue = await inputNestedReader.read();
+        const decodedValue = await decodedNestedReader.read();
+        expect(inputValue).toEqual(decodedValue);
+        expect(inputValue).toEqual({ value: undefined, done: true });
+      }
+    }
+
+    await decoded.done;
+  });
 });
