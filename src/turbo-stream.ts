@@ -125,9 +125,7 @@ async function decodeDeferred(
         const streamId = Number(line.slice(startIndex, colonIndex));
         const stream = this.streams[streamId];
         if (!stream) {
-          throw new Error(
-            `ReadableStream ID ${streamId} not found in stream while parsing ${line}`
-          );
+          throw new Error(`ReadableStream ID ${streamId} not found in stream`);
         }
         if (isDone) {
           stream.close();
