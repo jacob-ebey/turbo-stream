@@ -391,7 +391,7 @@ export function encode(
           }
           await Promise.race<unknown[]>([
             ...Object.values(encoder.deferred),
-            Object.values(encoder.streams)
+            ...Object.values(encoder.streams)
               .map((stream) => stream.finish)
               .filter((x) => !!x),
           ]);
