@@ -389,13 +389,12 @@ export function encode(
                 });
             }
           }
-          await Promise.race(
-            Object.values(encoder.deferred).concat(
-              Object.values(encoder.streams)
-                .map((stream) => stream.finish)
-                .filter((x) => !!x)
-            )
-          );
+          await Promise.race<unknown[]>([
+            ...Object.values(encoder.deferred),
+            Object.values(encoder.streams)
+              .map((stream) => stream.finish)
+              .filter((x) => !!x),
+          ]);
         }
 
         raceDone();
