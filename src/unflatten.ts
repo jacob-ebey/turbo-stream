@@ -117,7 +117,11 @@ function hydrate(this: ThisDecode, index: number): any {
           case TYPE_SET:
             const newSet = new Set();
             hydrated[index] = newSet;
-            for (let i = 1; i < value.length; i++)
+            // Going through the entries from back to front, because the postRun
+            // callbacks run in reverse (from last item to first)
+            // This results in a Set with its item order mirrored if we visit the
+            // first item first.
+            for (let i = value.length - 1; i >= 1; i --)
               stack.push([
                 value[i],
                 (v) => {
@@ -129,7 +133,11 @@ function hydrate(this: ThisDecode, index: number): any {
           case TYPE_MAP:
             const map = new Map();
             hydrated[index] = map;
-            for (let i = 1; i < value.length; i += 2) {
+            // Going through the entries from back to front, because the postRun
+            // callbacks run in reverse (from last item to first)
+            // This results in a Map with its item order mirrored if we visit the
+            // first item first.
+            for (let i = value.length - 2; i >= 1; i -= 2) {
               const r: any[] = [];
               stack.push([
                 value[i + 1],

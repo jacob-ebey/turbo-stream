@@ -120,6 +120,15 @@ test("should encode and decode Map", async () => {
   expect(output).toEqual(input);
 });
 
+test("should preserve Map entry order", async () => {
+  const input = new Map([
+    ["foo", "bar"],
+    ["baz", "qux"],
+  ]);
+  const output = await quickDecode(encode(input));
+  expect([...output as Map<unknown, unknown>]).toEqual([...input])
+})
+
 test("should encode and decode empty Map", async () => {
   const input = new Map();
   const output = await quickDecode(encode(input));
@@ -131,6 +140,12 @@ test("should encode and decode Set", async () => {
   const output = await quickDecode(encode(input));
   expect(output).toEqual(input);
 });
+
+test("should preserve Set entry order", async () => {
+  const input = new Set(["foo", "bar"]);
+  const output = await quickDecode(encode(input));
+  expect([...output as Set<unknown>]).toEqual([...input]);
+})
 
 test("should encode and decode empty Set", async () => {
   const input = new Set();
