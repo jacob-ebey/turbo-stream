@@ -52,8 +52,9 @@ test("should encode and decode Date", async () => {
 
 test("should encode and decode Invalid Date", async () => {
   const input = new Date('invalid');
-  const output = await quickDecode(encode(input));
-  expect(output).toEqual(input);
+  const output = await quickDecode(encode(input)) as Date;
+  expect(output?.toString()).toEqual('Invalid Date');
+  expect(output?.getTime()).toBe(NaN);
 });
 
 test("should encode and decode NaN", async () => {
