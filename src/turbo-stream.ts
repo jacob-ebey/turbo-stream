@@ -128,7 +128,11 @@ async function decodeDeferred(
           throw new Error(`ReadableStream ID ${streamId} not found in stream`);
         }
         if (isDone) {
-          stream.close();
+          try {
+            stream.close();
+          } catch {
+            /** stream could already be closed externally, we want to prevent any potential error */
+          }
           break;
         }
         const lineData = line.slice(colonIndex + 1);
@@ -143,7 +147,11 @@ async function decodeDeferred(
         if (isError) {
           stream.error(value);
         } else {
-          stream.enqueue(value);
+          try {
+            stream.enqueue(value);
+          } catch {
+            /** stream could already be closed externally, we want to prevent any potential error */
+          }
         }
 
         break;
