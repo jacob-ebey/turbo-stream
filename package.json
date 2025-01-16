@@ -33,7 +33,7 @@
     "json"
   ],
   "author": "Jacob Ebey <jacob.ebey@live.com>",
-  "license": "ISC",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/jacob-ebey/turbo-stream.git"
