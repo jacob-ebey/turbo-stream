@@ -15,6 +15,8 @@ export const TYPE_PROMISE = "P";
 export const TYPE_REGEXP = "R";
 export const TYPE_SET = "S";
 export const TYPE_SYMBOL = "Y";
+export const TYPE_STREAM = "T";
+export const TYPE_DONE = "O";
 export const TYPE_URL = "U";
 export const TYPE_PREVIOUS_RESOLVED = "Z";
 
@@ -31,6 +33,7 @@ export interface ThisDecode {
   values: unknown[];
   hydrated: unknown[];
   deferred: Record<number, Deferred<unknown>>;
+  streams: Record<number, ReadableStreamDefaultController<unknown>>;
   plugins?: DecodePlugin[];
 }
 
@@ -39,6 +42,7 @@ export interface ThisEncode {
   indices: Map<unknown, number>;
   stringified: string[];
   deferred: Record<number, Promise<unknown>>;
+  streams: Record<number, ReadableStream & { finish?: Promise<void> }>;
   plugins?: EncodePlugin[];
   postPlugins?: EncodePlugin[];
   signal?: AbortSignal;

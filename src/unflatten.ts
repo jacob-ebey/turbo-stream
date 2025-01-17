@@ -16,6 +16,7 @@ import {
   TYPE_PROMISE,
   TYPE_REGEXP,
   TYPE_SET,
+  TYPE_STREAM,
   TYPE_SYMBOL,
   TYPE_URL,
   type ThisDecode,
@@ -45,7 +46,7 @@ export function unflatten(this: ThisDecode, parsed: unknown): unknown {
 }
 
 function hydrate(this: ThisDecode, index: number): any {
-  const { hydrated, values, deferred, plugins } = this;
+  const { hydrated, values, deferred, streams, plugins } = this;
 
   let result: unknown;
   const stack = [
@@ -179,6 +180,19 @@ function hydrate(this: ThisDecode, index: number): any {
               const d = new Deferred();
               deferred[b] = d;
               set((hydrated[index] = d.promise));
+            }
+            continue;
+          case TYPE_STREAM:
+            if (hydrated[b]) {
+              set((hydrated[index] = hydrated[b]));
+            } else {
+              set(
+                (hydrated[index] = new ReadableStream({
+                  start(controller) {
+                    streams[b] = controller;
+                  },
+                }))
+              );
             }
             continue;
           case TYPE_ERROR:

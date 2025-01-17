@@ -13,6 +13,7 @@ import {
   TYPE_NULL_OBJECT,
   TYPE_PREVIOUS_RESOLVED,
   TYPE_PROMISE,
+  TYPE_STREAM,
   TYPE_REGEXP,
   TYPE_SET,
   TYPE_SYMBOL,
@@ -39,7 +40,7 @@ export function flatten(this: ThisEncode, input: unknown): number | [number] {
 }
 
 function stringify(this: ThisEncode, input: unknown, index: number) {
-  const { deferred, plugins, postPlugins } = this;
+  const { deferred, plugins, postPlugins, streams } = this;
   const str = this.stringified;
 
   const stack: [unknown, number][] = [[input, index]];
@@ -136,6 +137,22 @@ function stringify(this: ThisEncode, input: unknown, index: number) {
           } else if (input instanceof Promise) {
             str[index] = `["${TYPE_PROMISE}",${index}]`;
             deferred[index] = input;
+          } else if (input instanceof ReadableStream) {
+            str[index] = `["${TYPE_STREAM}",${index}]`;
+            // during this, the stream will be read, which is destructive
+            // so we tee it, and replace the methods on the original stream
+            // with methods forwarding to the left teed stream, while
+            // processing the right teed stream ourselves
+            const [left, right] = input.tee();
+            input.getReader = left.getReader.bind(left);
+            input.cancel = left.cancel.bind(left);
+            input.pipeThrough = left.pipeThrough.bind(left);
+            input.pipeTo = left.pipeTo.bind(left);
+            input.tee = left.tee.bind(left);
+            Object.defineProperty(input, "locked", {
+              get: () => left.locked,
+            });
+            streams[index] = right;
           } else if (input instanceof Error) {
             str[index] = `["${TYPE_ERROR}",${JSON.stringify(input.message)}`;
             if (input.name !== "Error") {
