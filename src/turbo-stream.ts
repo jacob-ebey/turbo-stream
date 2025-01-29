@@ -226,13 +226,6 @@ export function encode(
                     }
                   },
                   (reason) => {
-                    if (
-                      !reason ||
-                      (typeof reason !== "object" && !(reason instanceof Error))
-                    ) {
-                      reason = new Error("An unknown error occurred");
-                    }
-
                     const id = flatten.call(encoder, reason);
                     if (Array.isArray(id)) {
                       controller.enqueue(
