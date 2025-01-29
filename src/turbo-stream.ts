@@ -228,8 +228,7 @@ export function encode(
                   (reason) => {
                     if (
                       !reason ||
-                      typeof reason !== "object" ||
-                      !(reason instanceof Error)
+                      (typeof reason !== "object" && !(reason instanceof Error))
                     ) {
                       reason = new Error("An unknown error occurred");
                     }
