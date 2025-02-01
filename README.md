@@ -58,4 +58,4 @@ summary
 
 ## Legacy
 
-Shout out to Rich Harris and his https://github.com/rich-harris/devalue project. Devalue has heavily influenced this project and portions of the original code was directly lifted from it. I highly recommend checking it out if you need something more cusomizable or without streaming support. The new version has been re-written from the ground up and no longer resembles devalue.
+Shout out to Rich Harris and his https://github.com/rich-harris/devalue project. Devalue has heavily influenced this project and portions of the original code was directly lifted from it. I highly recommend checking it out if you need something more cusomizable or without streaming support. This new version has been re-written from the ground up and no longer resembles devalue.
