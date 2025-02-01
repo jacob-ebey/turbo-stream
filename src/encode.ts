@@ -343,6 +343,22 @@ export function encodeSync(
 						type: value.type,
 					}) as EncodeFrameObj,
 				);
+			} else if (value instanceof Error) {
+				encodeStack.push(
+					new EncodeFrame(
+						1,
+						STR_ERROR,
+						prepareErrorForEncoding(value, redactErrors),
+					) as EncodeFrameObj,
+				);
+			} else if (typeof (value as any).toJSON === "function") {
+				const newValue = (value as any).toJSON();
+				encodeStack.push(new EncodeFrame(1, "", newValue) as EncodeFrameObj);
+				if (typeof newValue === "object") {
+					counters.refId--;
+				} else {
+					refs.delete(value);
+				}
 			} else {
 				{
 					let isIterable =
@@ -390,17 +406,6 @@ export function encodeSync(
 							continue encodeLoop;
 						}
 					}
-				}
-
-				if (value instanceof Error) {
-					encodeStack.push(
-						new EncodeFrame(
-							1,
-							STR_ERROR,
-							prepareErrorForEncoding(value, redactErrors),
-						) as EncodeFrameObj,
-					);
-					continue;
 				}
 
 				encodeStack.push(new EncodeFrame(2, "}", undefined) as EncodeFrameObj);

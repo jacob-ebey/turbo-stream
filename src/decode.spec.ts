@@ -198,6 +198,53 @@ describe("decode", () => {
 		expect(await quickDecode([{ a: 1 }])).toEqual([{ a: 1 }]);
 	});
 
+	test("object toJSON", async () => {
+		const obj = {
+			toJSON() {
+				return 42;
+			},
+		};
+		expect(await quickDecode(obj)).toEqual(42);
+	});
+
+	test("object toJSON reference", async () => {
+		const obj = {
+			toJSON() {
+				return { j: 42 };
+			},
+		};
+		const obj2 = { a: "a", b: obj, c: obj };
+
+		const sub = { j: 42 };
+		const expected = { a: "a", b: sub, c: sub };
+
+		const decoded = await quickDecode(obj2);
+		expect(decoded).toEqual(expected);
+		expect(decoded.b).toBe(decoded.c);
+	});
+
+	test("object toJSON reference multiple", async () => {
+		const obj = {
+			toJSON() {
+				return { j: 42 };
+			},
+		};
+		const obj2 = { a: "1", b: obj, c: obj };
+		const obj3 = { a: "2", b: obj, c: obj };
+
+		const sub = { j: 42 };
+		const expected = [
+			{ a: "1", b: sub, c: sub },
+			{ a: "2", b: sub, c: sub },
+		];
+
+		const decoded = await quickDecode([obj2, obj3]);
+		expect(decoded).toEqual(expected);
+		expect(decoded[0].b).toBe(decoded[0].c);
+		expect(decoded[0].b).toBe(decoded[1].b);
+		expect(decoded[0].b).toBe(decoded[1].c);
+	});
+
 	test("array with circular references", async () => {
 		const arr: unknown[] = [];
 		arr.push(arr);

@@ -183,6 +183,47 @@ describe("encodeSync", () => {
 		expect(quickEncode(obj)).toBe('{"a":@0}');
 	});
 
+	test("object toJSON", () => {
+		const obj = {
+			toJSON() {
+				return 42;
+			},
+		};
+		expect(quickEncode(obj)).toBe("42");
+	});
+
+	test("object toJSON primitive multiple references", () => {
+		const obj = {
+			toJSON() {
+				return 42;
+			},
+		};
+		expect(quickEncode([obj, obj])).toBe("[42,42]");
+	});
+
+	test("object toJSON reference", () => {
+		const obj = {
+			toJSON() {
+				return { j: 42 };
+			},
+		};
+		const obj2 = { a: "a", b: obj, c: obj };
+		expect(quickEncode(obj2)).toBe('{"a":"a","b":{"j":42},"c":@1}');
+	});
+
+	test("object toJSON reference multiple", () => {
+		const obj = {
+			toJSON() {
+				return { j: 42 };
+			},
+		};
+		const obj2 = { a: "1", b: obj, c: obj };
+		const obj3 = { a: "2", b: obj, c: obj };
+		expect(quickEncode([obj2, obj3])).toBe(
+			'[{"a":"1","b":{"j":42},"c":@2},{"a":"2","b":@2,"c":@2}]',
+		);
+	});
+
 	test("array with circular reference", () => {
 		const arr: unknown[] = [];
 		arr.push(arr);
@@ -439,6 +480,38 @@ describe("encode", () => {
 		obj.a = obj;
 
 		expect(await quickEncode(obj)).toBe('{"a":@0}\n');
+	});
+
+	test("object toJSON", async () => {
+		const obj = {
+			toJSON() {
+				return 42;
+			},
+		};
+		expect(await quickEncode(obj)).toBe("42\n");
+	});
+
+	test("object toJSON reference", async () => {
+		const obj = {
+			toJSON() {
+				return { j: 42 };
+			},
+		};
+		const obj2 = { a: "a", b: obj, c: obj };
+		expect(await quickEncode(obj2)).toBe('{"a":"a","b":{"j":42},"c":@1}\n');
+	});
+
+	test("object toJSON reference multiple", async () => {
+		const obj = {
+			toJSON() {
+				return { j: 42 };
+			},
+		};
+		const obj2 = { a: "1", b: obj, c: obj };
+		const obj3 = { a: "2", b: obj, c: obj };
+		expect(await quickEncode([obj2, obj3])).toBe(
+			'[{"a":"1","b":{"j":42},"c":@2},{"a":"2","b":@2,"c":@2}]\n',
+		);
 	});
 
 	test("empty array", async () => {
