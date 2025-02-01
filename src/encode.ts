@@ -44,9 +44,20 @@ import {
 } from "./shared.js";
 let { NEGATIVE_INFINITY, POSITIVE_INFINITY, isNaN: nan } = Number;
 
+const ASYNC_FRAME_TYPE_PROMISE = 1;
+const ASYNC_FRAME_TYPE_ITERABLE = 2;
+
 type AsyncFrame =
-	| [type: 1, id: number, promise: PromiseLike<unknown>]
-	| [type: 2, id: number, iterable: AsyncIterable<unknown>];
+	| [
+			type: typeof ASYNC_FRAME_TYPE_PROMISE,
+			id: number,
+			promise: PromiseLike<unknown>,
+	  ]
+	| [
+			type: typeof ASYNC_FRAME_TYPE_ITERABLE,
+			id: number,
+			iterable: AsyncIterable<unknown>,
+	  ];
 
 export type EncodePlugin = (
 	value: unknown,
@@ -101,7 +112,7 @@ export function encode(
 				push: (...promiseFrames: AsyncFrame[]) => {
 					for (let [type, id, promise] of promiseFrames) {
 						wg.add();
-						if (type === 1) {
+						if (type === ASYNC_FRAME_TYPE_PROMISE) {
 							(promise as PromiseLike<unknown>).then(
 								handlePromiseResolved.bind(null, id),
 								handlePromiseRejected.bind(null, id),
@@ -121,13 +132,15 @@ export function encode(
 									}
 								} while (!result.done);
 							})()
-								.then(() => {
-									controller.enqueue(`${id}\n`);
-								})
-								.catch((error) => {
-									controller.enqueue(`${id}${STR_FAILURE}`);
-									encode(error);
-								})
+								.then(
+									() => {
+										controller.enqueue(`${id}\n`);
+									},
+									(error) => {
+										controller.enqueue(`${id}${STR_FAILURE}`);
+										encode(error);
+									},
+								)
 								.finally(() => {
 									wg.done();
 								});
@@ -151,9 +164,20 @@ export function encode(
 	});
 }
 
+const ENCODE_FRAME_TYPE_NEEDS_ENCODING = 1;
+const ENCODE_FRAME_TYPE_ALREADY_ENCODED = 2;
+
 type EncodeFrameObj =
-	| { type: 1; prefix: string; value: unknown }
-	| { type: 2; prefix: string; value: undefined };
+	| {
+			type: typeof ENCODE_FRAME_TYPE_NEEDS_ENCODING;
+			prefix: string;
+			value: unknown;
+	  }
+	| {
+			type: typeof ENCODE_FRAME_TYPE_ALREADY_ENCODED;
+			prefix: string;
+			value: undefined;
+	  };
 
 class EncodeFrame {
 	public type: number;
@@ -177,12 +201,16 @@ export function encodeSync(
 	redactErrors: boolean,
 ) {
 	let encodeStack: EncodeFrameObj[] = [
-		new EncodeFrame(1, "", value) as EncodeFrameObj,
+		new EncodeFrame(
+			ENCODE_FRAME_TYPE_NEEDS_ENCODING,
+			"",
+			value,
+		) as EncodeFrameObj,
 	];
 	let frame: EncodeFrameObj | undefined;
 
 	encodeLoop: while ((frame = encodeStack.pop()) !== undefined) {
-		if (frame.type === 2) {
+		if (frame.type === ENCODE_FRAME_TYPE_ALREADY_ENCODED) {
 			chunks.push(frame.prefix);
 			continue;
 		}
@@ -222,7 +250,11 @@ export function encodeSync(
 				let promiseId = counters.promiseId++;
 				promises.set(value, promiseId);
 				chunks.push(STR_PROMISE, promiseId.toString());
-				asyncFrames.push([1, promiseId, value as PromiseLike<unknown>]);
+				asyncFrames.push([
+					ASYNC_FRAME_TYPE_PROMISE,
+					promiseId,
+					value as PromiseLike<unknown>,
+				]);
 				continue;
 			}
 
@@ -237,7 +269,7 @@ export function encodeSync(
 				promises.set(value, iterableId);
 				chunks.push(STR_READABLE_STREAM, iterableId.toString());
 				asyncFrames.push([
-					2,
+					ASYNC_FRAME_TYPE_ITERABLE,
 					iterableId,
 					{
 						[Symbol.asyncIterator]: async function* () {
@@ -269,7 +301,11 @@ export function encodeSync(
 				let iterableId = counters.promiseId++;
 				promises.set(value, iterableId);
 				chunks.push(STR_ASYNC_ITERABLE, iterableId.toString());
-				asyncFrames.push([2, iterableId, value as AsyncIterable<unknown>]);
+				asyncFrames.push([
+					ASYNC_FRAME_TYPE_ITERABLE,
+					iterableId,
+					value as AsyncIterable<unknown>,
+				]);
 				continue;
 			}
 
@@ -320,14 +356,14 @@ export function encodeSync(
 			} else if (value instanceof FormData) {
 				encodeStack.push(
 					new EncodeFrame(
-						1,
+						ENCODE_FRAME_TYPE_NEEDS_ENCODING,
 						STR_FORM_DATA,
 						Array.from(value.entries()),
 					) as EncodeFrameObj,
 				);
 			} else if (SUPPORTS_FILE && value instanceof File) {
 				encodeStack.push(
-					new EncodeFrame(1, STR_FILE, {
+					new EncodeFrame(ENCODE_FRAME_TYPE_NEEDS_ENCODING, STR_FILE, {
 						promise: (value as File).arrayBuffer(),
 						size: value.size,
 						type: value.type,
@@ -337,7 +373,7 @@ export function encodeSync(
 				);
 			} else if (value instanceof Blob) {
 				encodeStack.push(
-					new EncodeFrame(1, STR_BLOB, {
+					new EncodeFrame(ENCODE_FRAME_TYPE_NEEDS_ENCODING, STR_BLOB, {
 						promise: (value as Blob).arrayBuffer(),
 						size: value.size,
 						type: value.type,
@@ -346,14 +382,20 @@ export function encodeSync(
 			} else if (value instanceof Error) {
 				encodeStack.push(
 					new EncodeFrame(
-						1,
+						ENCODE_FRAME_TYPE_NEEDS_ENCODING,
 						STR_ERROR,
 						prepareErrorForEncoding(value, redactErrors),
 					) as EncodeFrameObj,
 				);
 			} else if (typeof (value as any).toJSON === "function") {
 				const newValue = (value as any).toJSON();
-				encodeStack.push(new EncodeFrame(1, "", newValue) as EncodeFrameObj);
+				encodeStack.push(
+					new EncodeFrame(
+						ENCODE_FRAME_TYPE_NEEDS_ENCODING,
+						"",
+						newValue,
+					) as EncodeFrameObj,
+				);
 				if (typeof newValue === "object") {
 					counters.refId--;
 				} else {
@@ -371,12 +413,16 @@ export function encodeSync(
 							: Array.from(value as Iterable<unknown>);
 
 						encodeStack.push(
-							new EncodeFrame(2, "]", undefined) as EncodeFrameObj,
+							new EncodeFrame(
+								ENCODE_FRAME_TYPE_ALREADY_ENCODED,
+								"]",
+								undefined,
+							) as EncodeFrameObj,
 						);
 						for (let i = (toEncode as unknown[]).length - 1; i >= 0; i--) {
 							encodeStack.push(
 								new EncodeFrame(
-									1,
+									ENCODE_FRAME_TYPE_NEEDS_ENCODING,
 									i === 0 ? "" : ",",
 									(toEncode as unknown[])[i],
 								) as EncodeFrameObj,
@@ -401,14 +447,24 @@ export function encodeSync(
 						let result = plugins[i](value);
 						if (Array.isArray(result)) {
 							encodeStack.push(
-								new EncodeFrame(1, STR_PLUGIN, result) as EncodeFrameObj,
+								new EncodeFrame(
+									ENCODE_FRAME_TYPE_NEEDS_ENCODING,
+									STR_PLUGIN,
+									result,
+								) as EncodeFrameObj,
 							);
 							continue encodeLoop;
 						}
 					}
 				}
 
-				encodeStack.push(new EncodeFrame(2, "}", undefined) as EncodeFrameObj);
+				encodeStack.push(
+					new EncodeFrame(
+						ENCODE_FRAME_TYPE_ALREADY_ENCODED,
+						"}",
+						undefined,
+					) as EncodeFrameObj,
+				);
 				{
 					let keys = Object.keys(value as object);
 					let end = keys.length;
@@ -419,7 +475,7 @@ export function encodeSync(
 						let key = keys[i];
 						let prefix = i > 0 ? "," : "";
 						encodeFrames[end - i] = new EncodeFrame(
-							1,
+							ENCODE_FRAME_TYPE_NEEDS_ENCODING,
 							`${prefix}${JSON.stringify(key)}:`,
 							(value as any)[key],
 						);
