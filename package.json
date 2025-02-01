@@ -41,6 +41,7 @@
   "sideEffects": false,
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.12.2",
+    "@biomejs/biome": "^1.9.4",
     "@types/node": "^20.8.7",
     "esbuild": "^0.19.5",
     "expect": "^29.7.0",
