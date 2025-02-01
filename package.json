@@ -18,10 +18,12 @@
     "./package.json": "./package.json"
   },
   "scripts": {
+    "node": "node --no-warnings --loader tsm --enable-source-maps",
+    "bench": "pnpm node ./src/turbo-stream.bench.ts",
     "build": "pnpm build:esm && pnpm build:cjs && cp ./dist/turbo-stream.mjs ./viewer/scripts/turbo-stream.js",
     "build:cjs": "tsc --outDir dist --project tsconfig.lib.json",
     "build:esm": "esbuild --bundle --platform=node --target=node16 --format=esm --outfile=dist/turbo-stream.mjs src/turbo-stream.ts",
-    "test": "node --no-warnings --loader tsm --enable-source-maps --test-reporter tap --test src/*.spec.ts",
+    "test": "pnpm node --test-reporter tap --test src/*.spec.ts",
     "test-typecheck": "tsc --noEmit --project tsconfig.spec.json",
     "prepublish": "attw $(npm pack) --ignore-rules false-cjs"
   },
@@ -45,6 +47,7 @@
     "@types/node": "^20.8.7",
     "esbuild": "^0.19.5",
     "expect": "^29.7.0",
+    "mitata": "^1.0.33",
     "tsm": "^2.3.0",
     "typescript": "^5.2.2"
   }
