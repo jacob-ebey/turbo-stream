@@ -283,7 +283,7 @@ export function encodeSync(
 			}
 
 			if (value instanceof Date) {
-				chunks.push(STR_DATE, '"', value.toISOString(), '"');
+				chunks.push(STR_DATE, '"', value.toJSON(), '"');
 			} else if (value instanceof RegExp) {
 				chunks.push(STR_REGEXP, JSON.stringify([value.source, value.flags]));
 			} else if (value instanceof URL) {

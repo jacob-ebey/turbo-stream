@@ -129,6 +129,14 @@ describe("decode", () => {
 		expect(decoded).toBeInstanceOf(Date);
 	});
 
+	test("Date", async () => {
+		const date = new Date("invalid");
+		const decoded = await quickDecode(date);
+		expect(decoded).toBeInstanceOf(Date);
+		expect(decoded.toString()).toBe("Invalid Date");
+		expect(decoded.getTime()).toBeNaN();
+	});
+
 	test("Date reference", async () => {
 		const date = new Date();
 		const decoded = await quickDecode([date, date]);

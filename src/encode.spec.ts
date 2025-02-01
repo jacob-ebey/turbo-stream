@@ -136,6 +136,11 @@ describe("encodeSync", () => {
 		expect(quickEncode(date)).toBe(`${STR_DATE}"2021-01-01T00:00:00.000Z"`);
 	});
 
+	test("invalid Date", () => {
+		const input = new Date("invalid");
+		expect(quickEncode(input)).toBe(`${STR_DATE}""`);
+	});
+
 	test("empty object", () => {
 		expect(quickEncode({})).toBe("{}");
 	});
@@ -434,6 +439,11 @@ describe("encode", () => {
 		expect(await quickEncode(date)).toBe(
 			`${STR_DATE}"2021-01-01T00:00:00.000Z"\n`,
 		);
+	});
+
+	test("invalid Date", async () => {
+		const input = new Date("invalid");
+		expect(await quickEncode(input)).toBe(`${STR_DATE}""\n`);
 	});
 
 	test("Date reference", async () => {
