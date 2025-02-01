@@ -1,22 +1,18 @@
 {
-  "compilerOptions": {
-    "module": "Node16",
-    "moduleResolution": "Node16",
-    "lib": [
-      "DOM",
-      "DOM.Iterable",
-      "ES2022"
-    ],
-    "types": [],
-    "strict": true,
-    "downlevelIteration": true
-  },
-  "references": [
-    {
-      "path": "./tsconfig.lib.json"
-    },
-    {
-      "path": "./tsconfig.spec.json"
-    }
-  ]
+	"compilerOptions": {
+		"module": "Node16",
+		"moduleResolution": "Node16",
+		"lib": ["DOM", "DOM.Iterable", "ES2022"],
+		"types": [],
+		"strict": true,
+		"downlevelIteration": true
+	},
+	"references": [
+		{
+			"path": "./tsconfig.lib.json"
+		},
+		{
+			"path": "./tsconfig.spec.json"
+		}
+	]
 }
