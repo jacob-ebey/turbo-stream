@@ -346,6 +346,13 @@ describe("decode", () => {
 		expect(decoded.b.b).toBe("b");
 	});
 
+	test("empty set", async () => {
+		const set = new Set();
+		const decoded = await quickDecode(set);
+		expect(decoded).toBeInstanceOf(Set);
+		expect(Array.from(decoded)).toEqual(Array.from(set));
+	});
+
 	test("set", async () => {
 		const set = new Set([1, 2, 3]);
 		const decoded = await quickDecode(set);
@@ -359,6 +366,13 @@ describe("decode", () => {
 		expect(decoded).toBeInstanceOf(Set);
 		expect(Array.from(decoded).slice(-1)).toEqual(Array.from(set).slice(-1));
 		expect(decoded.has(decoded));
+	});
+
+	test("empty map", async () => {
+		const map = new Map();
+		const decoded = await quickDecode(map);
+		expect(decoded).toBeInstanceOf(Map);
+		expect(Array.from(decoded)).toEqual(Array.from(map));
 	});
 
 	test("map", async () => {
