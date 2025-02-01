@@ -269,4 +269,4 @@ boxplot(() => {
 	});
 });
 
-run();
+await run();

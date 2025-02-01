@@ -19,7 +19,7 @@
   },
   "scripts": {
     "node": "node --no-warnings --loader tsm --enable-source-maps",
-    "bench": "pnpm node ./src/turbo-stream.bench.ts",
+    "bench": "pnpm node ./src/turbo-stream.bench.mts",
     "build": "pnpm build:esm && pnpm build:cjs && cp ./dist/turbo-stream.mjs ./viewer/scripts/turbo-stream.js",
     "build:cjs": "tsc --outDir dist --project tsconfig.lib.json",
     "build:esm": "esbuild --bundle --platform=node --target=node16 --format=esm --outfile=dist/turbo-stream.mjs src/turbo-stream.ts",
