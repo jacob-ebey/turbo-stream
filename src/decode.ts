@@ -179,7 +179,6 @@ export async function decode<T>(
 						let result = plugins[i](...(value as [string, ...unknown[]]));
 						if (typeof result === "object" && result !== null) {
 							value = result.value;
-							references.set((value as ReferenceArray).__id, value as object);
 							pluginHandled = true;
 							break;
 						}
