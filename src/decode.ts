@@ -212,10 +212,12 @@ export async function decode<T>(
 			(stack[stack.length - 1] as any)[parent] = value;
 		} else if (typeof parent === "boolean") {
 			stack.pop();
-			let deferred = deferredValues.get(stack.pop() as number);
+			const id = stack.pop() as number;
+			let deferred = deferredValues.get(id);
 			if (!deferred) {
 				throw new Error("Invalid stack state");
 			}
+			deferredValues.delete(id);
 			if (deferred instanceof Deferred) {
 				if (parent) {
 					deferred.resolve(value);
@@ -631,8 +633,9 @@ export async function decode<T>(
 				root.reject(error);
 				root = null;
 			}
-			for (let deferred of deferredValues.values()) {
+			for (let [key, deferred] of deferredValues.entries()) {
 				deferred.reject(error);
+				deferredValues.delete(key);
 			}
 		})
 		.finally(() => {
