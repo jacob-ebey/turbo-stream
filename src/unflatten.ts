@@ -115,38 +115,45 @@ function hydrate(this: ThisDecode, index: number): any {
             set((hydrated[index] = Symbol.for(b)));
             continue;
           case TYPE_SET:
+            // Use an intermediate array so that we maintain the order of the
+            // set.
+            const setArray: unknown[] = [];
             const newSet = new Set();
             hydrated[index] = newSet;
             for (let i = 1; i < value.length; i++)
               stack.push([
                 value[i],
                 (v) => {
-                  newSet.add(v);
+                  setArray[i - 1] = v;
                 },
               ]);
+            postRun.push(() => {
+              for (const v of setArray) {
+                newSet.add(v);
+              }
+            });
             set(newSet);
             continue;
           case TYPE_MAP:
+            // Use an intermediate array so that we maintain the order of the
+            // map.
+            const mapEntries: unknown[] = [];
             const map = new Map();
             hydrated[index] = map;
-            for (let i = 1; i < value.length; i += 2) {
+            for (let i = 1; i < value.length; i++) {
               const r: any[] = [];
               stack.push([
-                value[i + 1],
-                (v) => {
-                  r[1] = v;
-                },
-              ]);
-              stack.push([
                 value[i],
-                (k) => {
-                  r[0] = k;
+                (v) => {
+                  mapEntries[i - 1] = v;
                 },
               ]);
-              postRun.push(() => {
-                map.set(r[0], r[1]);
-              });
             }
+            postRun.push(() => {
+              for (let i = 0; i < mapEntries.length; i += 2) {
+                map.set(mapEntries[i], mapEntries[i + 1]);
+              }
+            });
             set(map);
             continue;
           case TYPE_NULL_OBJECT:
