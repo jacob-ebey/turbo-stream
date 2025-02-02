@@ -631,7 +631,7 @@ export async function decode<T>(
 				root.reject(error);
 				root = null;
 			}
-			for (let [key, deferred] of deferredValues.entries()) {
+			for (let deferred of deferredValues.values()) {
 				deferred.reject(error);
 			}
 		})
