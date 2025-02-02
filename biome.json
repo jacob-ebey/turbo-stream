@@ -20,7 +20,11 @@
 		"enabled": true,
 		"rules": {
 			"recommended": true,
+			"complexity": {
+				"useArrowFunction": "off"
+			},
 			"style": {
+				"noArguments": "off",
 				"noParameterAssign": "off",
 				"useConst": "off",
 				"useTemplate": "off"
