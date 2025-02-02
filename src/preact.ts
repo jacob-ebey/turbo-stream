@@ -66,18 +66,18 @@ let preactDecode = ({
 				Array.from(arguments).slice(3),
 			);
 
+			const cc = compat.lazy(async () => {
+				return {
+					default: await decodePromise,
+				};
+			});
+			cc.displayName = "Client Component";
+
 			return {
-				value: preact.h(
-					compat.lazy(async () => {
-						return {
-							default: await decodePromise,
-						};
-					}),
-					{
-						key: keyOrRendered as string,
-						...(typeOrProps as preact.Attributes),
-					},
-				),
+				value: preact.h(cc, {
+					key: keyOrRendered as string,
+					...(typeOrProps as preact.Attributes),
+				}),
 			};
 		}
 
@@ -105,15 +105,19 @@ let preactDecode = ({
 				keyOrRendered !== null &&
 				typeof (keyOrRendered as any).then === "function"
 			) {
+				const sc = compat.lazy(() =>
+					(keyOrRendered as Promise<unknown>).then((resolved) => {
+						const rendered = () => resolved as preact.VNode;
+						rendered.displayName = "Resolved Content";
+						return {
+							default: rendered,
+						};
+					}),
+				);
+				(sc as any).displayName = "Async Server Component";
+
 				return {
-					value: preact.h(
-						compat.lazy(() =>
-							(keyOrRendered as Promise<unknown>).then((resolved) => ({
-								default: () => resolved as preact.VNode,
-							})),
-						),
-						null,
-					),
+					value: preact.h(sc, null),
 				};
 			}
 			return {

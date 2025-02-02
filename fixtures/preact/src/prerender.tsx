@@ -6,6 +6,7 @@ import {
 	decode,
 	type DecodeClientReferenceFunction,
 } from "../../../src/preact";
+import { loadClientReference } from "virtual:preact-server/client";
 
 import type { EncodedClientReference } from "./server";
 
@@ -52,8 +53,8 @@ export async function prerender(
 
 const decodeClientReference: DecodeClientReferenceFunction<
 	EncodedClientReference
-> = async ([id]) => {
-	return () => "Client Reference";
+> = async ([id, name]) => {
+	return loadClientReference(id, name);
 };
 
 // This escapeHtml utility is based on https://github.com/zertosh/htmlescape
