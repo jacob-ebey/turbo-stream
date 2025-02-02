@@ -2,7 +2,12 @@ import type { VNode } from "preact";
 import { Suspense } from "preact/compat";
 import { renderToStringAsync } from "preact-render-to-string";
 
-import { decode } from "../../../src/preact";
+import {
+	decode,
+	type DecodeClientReferenceFunction,
+} from "../../../src/preact";
+
+import type { EncodedClientReference } from "./server";
 
 async function readToText(stream: ReadableStream<string>) {
 	let result = "";
@@ -27,7 +32,9 @@ export async function prerender(
 ) {
 	const [payloadStreamA, payloadStreamB] = payloadStream.tee();
 	const [payload, inlinePayload] = await Promise.all([
-		decode<VNode>(payloadStreamA),
+		decode<VNode>(payloadStreamA, {
+			decodeClientReference,
+		}),
 		readToText(payloadStreamB),
 	]);
 	const rendered = await renderToStringAsync(
@@ -42,6 +49,12 @@ export async function prerender(
 	);
 	return html.replace('<div id="app">', `<div id="app">${rendered}`);
 }
+
+const decodeClientReference: DecodeClientReferenceFunction<
+	EncodedClientReference
+> = async ([id]) => {
+	return () => "Client Reference";
+};
 
 // This escapeHtml utility is based on https://github.com/zertosh/htmlescape
 // License: https://github.com/zertosh/htmlescape/blob/0527ca7156a524d256101bb310a9f970f63078ad/LICENSE

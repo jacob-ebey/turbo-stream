@@ -37,7 +37,6 @@ function Root({ initialPayload }: { initialPayload: VNode }) {
 		new TextDecoderStream(),
 	);
 	const payload = await decode<VNode>(payloadStream);
-	console.log(payload);
 	const app = document.getElementById("app");
 	if (!app) throw new Error("No #app element");
 	hydrate(h(Root, { initialPayload: payload }), app);

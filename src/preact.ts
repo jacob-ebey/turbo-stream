@@ -42,15 +42,12 @@ export type DecodeServerReferenceFunction = (
 ) => (...args: any[]) => Promise<unknown>;
 
 export type EncodeOptions = turbo.EncodeOptions & {
-	encodeClientReference?: EncodeClientReferenceFunction<
-		ClientReference,
-		EncodedClientReference
-	>;
-	encodeServerReference?: EncodeServerReferenceFunction<ServerReference>;
+	encodeClientReference?: EncodeClientReferenceFunction<any, any>;
+	encodeServerReference?: EncodeServerReferenceFunction<any>;
 };
 
 export type DecodeOptions = turbo.DecodeOptions & {
-	decodeClientReference?: DecodeClientReferenceFunction<EncodedClientReference>;
+	decodeClientReference?: DecodeClientReferenceFunction<any>;
 	decodeServerReference?: (
 		encoded: string,
 	) => (...args: unknown[]) => Promise<unknown>;

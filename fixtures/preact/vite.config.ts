@@ -1,7 +1,9 @@
 import * as fs from "node:fs/promises";
+import * as path from "node:path";
 import { Readable } from "node:stream";
 
 import preact from "@preact/preset-vite";
+import * as lexer from "es-module-lexer";
 import {
 	createRunnableDevEnvironment,
 	defineConfig,
@@ -9,11 +11,13 @@ import {
 } from "vite";
 
 const toPrerender = ["/"];
+const preactServerEnvironments = ["server"];
 
 export default defineConfig({
 	builder: {
 		async buildApp(builder) {
-			if (process.env.PRERENDER) {
+			console.log({ PRERENDER: process.env.PRERENDER });
+			if (process.env.PRERENDER === "1") {
 				const [indexHTML, prerenderMod, serverMod] = await Promise.all([
 					fs.readFile("dist/browser/index.html", "utf8"),
 					import(
@@ -84,6 +88,59 @@ export default defineConfig({
 	plugins: [
 		preact({}),
 		{
+			name: "preact-server",
+			transform(code, id) {
+				try {
+					if (!isJavaScriptModule(id)) return;
+
+					const directiveMatch = code.match(/['"]use (client|server)['"]/);
+					if (!directiveMatch) return;
+					const useFor = directiveMatch[1] as "client" | "server";
+
+					const [, exports] = lexer.parse(code, id);
+					const referenceId = path
+						.relative(this.environment.config.root, id)
+						.replace(/\\/g, "/");
+
+					if (useFor === "client") {
+						if (preactServerEnvironments.includes(this.environment.name)) {
+							const newExports = exports
+								.map(
+									(exp) =>
+										`export const ${exp.n} = { $$typeof: CLIENT_REFERENCE, $$id: ${JSON.stringify(referenceId)} };`,
+								)
+								.join("\n");
+
+							return `const CLIENT_REFERENCE = Symbol.for("preact.client.reference");\n${newExports}`;
+						}
+					} else if (useFor === "server") {
+						if (preactServerEnvironments.includes(this.environment.name)) {
+							const markExports = exports
+								.map(
+									(exp) =>
+										`if (typeof ${exp.n} === "function") { ${exp.n}.$$typeof = SERVER_REFERENCE; ${exp.n}.$$id = ${JSON.stringify(referenceId)}; }`,
+								)
+								.join("\n");
+
+							return `${code}\n${markExports}`;
+						}
+
+						const newExports = exports
+							.map(
+								(exp) =>
+									`export const ${exp.n} = { $$typeof: SERVER_REFERENCE, $$id: ${JSON.stringify(referenceId)} };`,
+							)
+							.join("\n");
+
+						return `const SERVER_REFERENCE = Symbol.for("preact.server.reference");\n${newExports}`;
+					}
+				} catch (error) {
+					console.log("HERE!!!!!");
+					console.error(error);
+				}
+			},
+		},
+		{
 			name: "dev-server",
 			configureServer(server) {
 				return () => {
@@ -118,3 +175,8 @@ export default defineConfig({
 		},
 	],
 });
+
+const jsModuleExtensions = [".js", ".mjs", ".jsx", ".ts", ".mts", ".tsx"];
+function isJavaScriptModule(id: string) {
+	return jsModuleExtensions.some((ext) => id.endsWith(ext));
+}
