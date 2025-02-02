@@ -355,7 +355,6 @@ export async function decode<T>(
 					stack.push(false);
 				} else if (charCode === 117) {
 					// u
-					i += 8;
 					releaseValue(undefined, 0);
 				} else if (charCode === 110) {
 					// n

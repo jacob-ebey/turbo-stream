@@ -36,7 +36,7 @@ export const STR_UINT_16_ARRAY = "l";
 export const STR_UINT_32_ARRAY = "g";
 export const STR_UINT_8_ARRAY = "o";
 export const STR_UINT_8_ARRAY_CLAMPED = "C";
-export const STR_UNDEFINED = "undefined";
+export const STR_UNDEFINED = "u";
 export const STR_URL = "U";
 
 let SUPPORTS_FILE = true;

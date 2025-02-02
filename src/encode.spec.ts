@@ -60,7 +60,7 @@ describe("encodeSync", () => {
 	}
 
 	test("undefined", () => {
-		expect(quickEncode(undefined)).toBe("undefined");
+		expect(quickEncode(undefined)).toBe("u");
 	});
 
 	test("null", () => {
@@ -238,7 +238,7 @@ describe("encodeSync", () => {
 
 	test("error", () => {
 		expect(quickEncode(new Error("error"))).toBe(
-			'E{"name":"Error","message":"<redacted>","stack":"<redacted>","cause":undefined}',
+			'E{"name":"Error","message":"<redacted>","stack":"<redacted>","cause":u}',
 		);
 	});
 
@@ -253,7 +253,7 @@ describe("encodeSync", () => {
 	});
 
 	test("function", () => {
-		expect(quickEncode(() => {})).toBe("undefined");
+		expect(quickEncode(() => {})).toBe("u");
 	});
 
 	test("plugins", () => {
@@ -357,7 +357,7 @@ describe("encode", () => {
 	}
 
 	test("undefined", async () => {
-		expect(await quickEncode(undefined)).toBe("undefined\n");
+		expect(await quickEncode(undefined)).toBe("u\n");
 	});
 
 	test("null", async () => {
@@ -417,7 +417,7 @@ describe("encode", () => {
 	});
 
 	test("function", async () => {
-		expect(await quickEncode(() => {})).toBe("undefined\n");
+		expect(await quickEncode(() => {})).toBe("u\n");
 	});
 
 	test("empty string", async () => {
@@ -578,7 +578,7 @@ describe("encode", () => {
 			],
 		];
 		expect(await quickEncode(values)).toBe(
-			`[undefined,null,true,false,NaN,I,i,z,0,42,-42,3.14,-3.14,b42,{},[\"1\",2,\"3\",s\"daSymbol\",D\"2021-01-01T00:00:00.000Z\",U\"https://example.com/\"]]\n`,
+			`[u,null,true,false,NaN,I,i,z,0,42,-42,3.14,-3.14,b42,{},[\"1\",2,\"3\",s\"daSymbol\",D\"2021-01-01T00:00:00.000Z\",U\"https://example.com/\"]]\n`,
 		);
 	});
 
@@ -665,6 +665,19 @@ describe("encode", () => {
 		).toBe('P["A","a",P["B","b"]]\n');
 	});
 
+	test("plugins can handle functions", async () => {
+		const fn = () => {};
+		expect(
+			await quickEncode(fn, [
+				(value) => {
+					if (typeof value === "function") {
+						return ["fn"];
+					}
+				},
+			]),
+		).toBe('P["fn"]\n');
+	});
+
 	test("promise", async () => {
 		const promise = Promise.resolve(42);
 		expect(await quickEncode(promise)).toBe("$0\n0:42\n");
@@ -678,7 +691,7 @@ describe("encode", () => {
 	test("rejected promise error", async () => {
 		const promise = Promise.reject(new Error("rejected"));
 		expect(await quickEncode(promise)).toBe(
-			'$0\n0!E{"name":"Error","message":"<redacted>","stack":"<redacted>","cause":undefined}\n',
+			'$0\n0!E{"name":"Error","message":"<redacted>","stack":"<redacted>","cause":u}\n',
 		);
 	});
 
@@ -720,7 +733,7 @@ describe("encode", () => {
 			},
 		};
 		expect(await quickEncode(asyncIterable)).toBe(
-			'*0\n0:1\n0:2\n0!E{"name":"Error","message":"<redacted>","stack":"<redacted>","cause":undefined}\n',
+			'*0\n0:1\n0:2\n0!E{"name":"Error","message":"<redacted>","stack":"<redacted>","cause":u}\n',
 		);
 	});
 

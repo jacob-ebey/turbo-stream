@@ -511,6 +511,20 @@ export function encodeSync(
 				chunks.push(STR_UNDEFINED);
 			}
 		} else {
+			let pluginsLength = plugins.length;
+			for (let i = 0; i < pluginsLength; i++) {
+				let result = plugins[i](value);
+				if (Array.isArray(result)) {
+					encodeStack.push(
+						new EncodeFrame(
+							ENCODE_FRAME_TYPE_NEEDS_ENCODING,
+							STR_PLUGIN,
+							result,
+						) as EncodeFrameObj,
+					);
+					continue encodeLoop;
+				}
+			}
 			chunks.push(STR_UNDEFINED);
 		}
 	}
