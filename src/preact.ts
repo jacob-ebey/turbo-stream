@@ -261,7 +261,6 @@ let preactEncode =
 						? (rendered as PromiseLike<unknown>).then(
 								(resolved) => resolved,
 								(error) => {
-									console.log("HERE!!!!!");
 									return preact.h(() => {
 										throw error;
 									}, null);

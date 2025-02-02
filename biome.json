@@ -23,6 +23,9 @@
 			"complexity": {
 				"useArrowFunction": "off"
 			},
+			"security": {
+				"noDangerouslySetInnerHtml": "off"
+			},
 			"style": {
 				"noArguments": "off",
 				"noParameterAssign": "off",
