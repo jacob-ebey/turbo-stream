@@ -453,6 +453,8 @@ export function encodeSync(
 									result,
 								) as EncodeFrameObj,
 							);
+							counters.refId--;
+							refs.delete(value);
 							continue encodeLoop;
 						}
 					}
