@@ -66,12 +66,19 @@ export type EncodePlugin = (
 export type EncodeOptions = {
 	plugins?: EncodePlugin[];
 	redactErrors?: boolean;
+	signal?: AbortSignal;
 };
 
 export function encode(
 	value: unknown,
-	{ plugins = [], redactErrors = true }: EncodeOptions = {},
+	{ plugins = [], redactErrors = true, signal }: EncodeOptions = {},
 ) {
+	const aborted = () => signal?.aborted ?? false;
+	const waitForAbort = new Promise<never>((_, reject) => {
+		signal?.addEventListener("abort", (reason) => {
+			reject(new DOMException("Aborted", "AbortError"));
+		});
+	});
 	return new ReadableStream<string>({
 		async start(controller) {
 			let refCache = new WeakMap();
@@ -98,12 +105,16 @@ export function encode(
 
 			let handlePromiseResolved = (id: number, value: unknown) => {
 				wg.done();
+
+				if (aborted()) return;
 				controller.enqueue(`${id}${STR_SUCCESS}`);
 				encode(value);
 			};
 
 			let handlePromiseRejected = (id: number, error: unknown) => {
 				wg.done();
+
+				if (aborted()) return;
 				controller.enqueue(`${id}${STR_FAILURE}`);
 				encode(error);
 			};
@@ -113,7 +124,9 @@ export function encode(
 					for (let [type, id, promise] of promiseFrames) {
 						wg.add();
 						if (type === ASYNC_FRAME_TYPE_PROMISE) {
-							(promise as PromiseLike<unknown>).then(
+							(
+								Promise.race([promise, waitForAbort]) as PromiseLike<unknown>
+							).then(
 								handlePromiseResolved.bind(null, id),
 								handlePromiseRejected.bind(null, id),
 							);
@@ -126,6 +139,9 @@ export function encode(
 								let result: IteratorResult<unknown>;
 								do {
 									result = await iterator.next();
+									
+									if (aborted()) return;
+									
 									if (!result.done) {
 										controller.enqueue(`${id}${STR_SUCCESS}`);
 										encode(result.value);
@@ -134,9 +150,11 @@ export function encode(
 							})()
 								.then(
 									() => {
+										if (aborted()) return;
 										controller.enqueue(`${id}\n`);
 									},
 									(error) => {
+										if (aborted()) return;
 										controller.enqueue(`${id}${STR_FAILURE}`);
 										encode(error);
 									},
@@ -153,7 +171,7 @@ export function encode(
 				encode(value);
 
 				do {
-					await wg.wait();
+					await Promise.race([wg.wait(), waitForAbort]);
 				} while (wg.p > 0);
 
 				controller.close();

@@ -9,8 +9,9 @@ function quickDecode<T>(
 	value: T,
 	encodePlugins: EncodePlugin[] = [],
 	decodePlugins: DecodePlugin[] = [],
+	signal?: AbortSignal,
 ): Promise<T> {
-	const encoded = encode(value, { plugins: encodePlugins });
+	const encoded = encode(value, { plugins: encodePlugins, signal });
 	return decode(
 		// make sure we can process streams character by character
 		encoded.pipeThrough(
@@ -457,6 +458,25 @@ describe("decode", () => {
 		expect(decoded[1]).toBe(decoded[0]);
 	});
 
+	test("promise can be interrupted by signal", async () => {
+		const deferred = new Deferred<void>();
+		const root = {
+			promise: deferred.promise,
+		};
+		const controller = new AbortController();
+		const decoded = await quickDecode(
+			root,
+			undefined,
+			undefined,
+			controller.signal,
+		);
+		expect(decoded.promise).toBeInstanceOf(Promise);
+		controller.abort();
+		deferred.resolve();
+
+		await expect(decoded.promise).rejects.toThrowError("Aborted");
+	});
+
 	test("async iterable", async () => {
 		const asyncIterable = {
 			async *[Symbol.asyncIterator]() {
@@ -578,6 +598,38 @@ describe("decode", () => {
 		}
 	});
 
+	test("async iterable can be interrupted by signal", async () => {
+		const deferred = new Deferred<void>();
+		const done = new Deferred<void>();
+		const asyncIterable = {
+			async *[Symbol.asyncIterator]() {
+				yield 1;
+				yield 2;
+				deferred.resolve();
+				await done.promise;
+				yield 3;
+			},
+		};
+		const root = { asyncIterable };
+		const controller = new AbortController();
+		const decoded = await quickDecode(
+			root,
+			undefined,
+			undefined,
+			controller.signal,
+		);
+		expect(typeof decoded.asyncIterable[Symbol.asyncIterator]).toBe("function");
+		const read = async () => {
+			for await (const value of decoded.asyncIterable) {
+			}
+		};
+		const readPromise = read();
+		await deferred.promise;
+		controller.abort();
+		done.resolve();
+		await expect(readPromise).rejects.toThrowError("Aborted");
+	});
+
 	test("readable stream", async () => {
 		const readableStream = new ReadableStream({
 			start(controller) {
@@ -697,6 +749,43 @@ describe("decode", () => {
 		expect(await readerA.read()).toEqual({ done: false, value: "b" });
 		expect(await readerB.read()).toEqual({ done: true });
 		expect(await readerA.read()).toEqual({ done: true });
+	});
+
+	test("readable stream can be interrupted by signal", async () => {
+		const deferred = new Deferred<void>();
+		const done = new Deferred<void>();
+		const controller = new AbortController();
+		const readableStream = new ReadableStream({
+			async start(controller) {
+				controller.enqueue("a");
+				controller.enqueue("b");
+				deferred.resolve();
+				await done.promise;
+				controller.enqueue("c");
+				controller.close();
+			},
+		});
+		const root = { readableStream };
+		const decoded = await quickDecode(
+			root,
+			undefined,
+			undefined,
+			controller.signal,
+		);
+		expect(decoded.readableStream).toBeInstanceOf(ReadableStream);
+		await deferred.promise;
+		controller.abort();
+		done.resolve();
+		const read = async () => {
+			const reader = decoded.readableStream.getReader();
+			while (true) {
+				const { done } = await reader.read();
+				if (done) {
+					break;
+				}
+			}
+		};
+		await expect(read()).rejects.toThrowError("Aborted");
 	});
 
 	test("can encode and decode recursive promises beyond the maximum call stack size", async () => {
