@@ -34,3 +34,6 @@ jobs:
 
       - name: Typecheck Tests
         run: pnpm test-typecheck
+
+      - name: PR Publish
+        run: pnpx pkg-pr-new publish
