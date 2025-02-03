@@ -36,4 +36,5 @@ jobs:
         run: pnpm test-typecheck
 
       - name: PR Publish
+        if: matrix.node-version == '22.x'
         run: pnpx pkg-pr-new publish
