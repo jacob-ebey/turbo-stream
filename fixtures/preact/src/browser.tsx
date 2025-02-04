@@ -1,7 +1,8 @@
 import { h, type ComponentType, type VNode } from "preact";
-import { useState } from "preact/hooks";
+import { useEffect, useState } from "preact/hooks";
 import { lazy, Suspense } from "preact/compat";
 import { createRoot, hydrateRoot } from "preact/compat/client";
+import 'preact/debug'
 
 import {
 	decode,
@@ -52,6 +53,7 @@ function getDataURL() {
 	const payload = await decode<VNode>(payloadStream, {
 		decodeClientReference,
 	});
+
 	const app = document.getElementById("app");
 	if (!app) throw new Error("No #app element");
 	if (window.PREACT_STREAM) {
@@ -105,11 +107,22 @@ const decodeClientReference: DecodeClientReferenceFunction<
 	if (cached) {
 		return cached;
 	}
-	const Comp = lazy(() =>
+
+	const LazyComponent = lazy(() =>
 		loadClientReference(encoded).then((Component: any) => ({
 			default: Component,
 		})),
 	) as ComponentType;
+
+	const Comp = () => {
+		const [hydrated, setHydrated] = useState(false);
+		useEffect(() => {
+			setHydrated(true)
+		}, []);
+
+		return hydrated ? <LazyComponent /> : null;
+	}
+
 	cache.set(key, Comp);
 	return Comp;
 };
