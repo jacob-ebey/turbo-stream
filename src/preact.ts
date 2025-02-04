@@ -97,12 +97,7 @@ let preactDecode = ({
 				typeof (keyOrRendered as any).then === "function"
 			) {
 				return {
-					value: preact.h(compat.lazy(async () => {
-						const resolved = await keyOrRendered;
-						return {
-							default: () => resolved as () => preact.ComponentType<any>,
-						};
-					}), null)
+					value: keyOrRendered,
 				};
 			}
 			return {

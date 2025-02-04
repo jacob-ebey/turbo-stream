@@ -36,6 +36,11 @@ export default defineConfig(({ mode }) => {
 		build: {
 			minify: false,
 		},
+		resolve: {
+			alias: {
+				"preact-render-to-string": "../../../preact-render-to-string/src/index.js",
+			}
+		},
 		builder: {
 			async buildApp(builder) {
 				if (mode === "prerender") {

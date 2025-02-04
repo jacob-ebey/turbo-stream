@@ -54,15 +54,23 @@ export async function prerender(
 	return html.replace('<div id="app">', `<div id="app">${rendered}`);
 }
 
+const cache = new Map<string, ComponentType>();
+
 const decodeClientReference: DecodeClientReferenceFunction<
 	EncodedClientReference
 > = (encoded) => {
+	const key = `${encoded[0]}:${encoded[1]}`;
+	const cached = cache.get(key);
+	if (cached) {
+		return cached;
+	}
 	const Comp = lazy(() =>
-		loadClientReference(encoded).then((C: any) => ({
-			default: () => C,
+		loadClientReference(encoded).then((Component: any) => ({
+			default: Component,
 		})),
-	);
-	return Comp as any as unknown as ComponentType;
+	) as ComponentType;
+	cache.set(key, Comp);
+	return Comp;
 };
 
 // This escapeHtml utility is based on https://github.com/zertosh/htmlescape
