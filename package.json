@@ -18,7 +18,7 @@
 		"./package.json": "./package.json"
 	},
 	"scripts": {
-		"node": "node --no-warnings --loader tsm --enable-source-maps --conditions source",
+		"node": "node --no-warnings --loader tsm --enable-source-maps",
 		"bench": "pnpm node ./src/turbo-stream.bench.mts",
 		"build": "pnpm build:esm && pnpm build:cjs && cp ./dist/turbo-stream.mjs ./viewer/scripts/turbo-stream.js",
 		"build:cjs": "tsc --outDir dist --project tsconfig.lib.json",
@@ -58,6 +58,7 @@
 		"mitata": "^1.0.33",
 		"preact": "^10.25.4",
 		"preact-render-to-string": "^6.5.13",
+		"pkg-pr-new": "^0.0.39",
 		"tsm": "^2.3.0",
 		"typescript": "^5.2.2"
 	}
