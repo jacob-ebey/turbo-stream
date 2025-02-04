@@ -37,9 +37,7 @@ export default defineConfig(({ mode }) => {
 			minify: false,
 		},
 		resolve: {
-			alias: {
-				"preact-render-to-string": "../../../preact-render-to-string/src/index.js",
-			}
+			dedupe: ["preact"],
 		},
 		builder: {
 			async buildApp(builder) {
