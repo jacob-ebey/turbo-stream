@@ -1,8 +1,11 @@
 {
 	"name": "turbo-stream",
-	"version": "2.4.1",
+	"version": "3.0.0",
 	"description": "A streaming data transport format that aims to support built-in features such as Promises, Dates, RegExps, Maps, Sets and more.",
-	"files": ["dist", "README.md"],
+	"files": [
+		"dist",
+		"README.md"
+	],
 	"main": "dist/turbo-stream.js",
 	"types": "dist/turbo-stream.d.ts",
 	"exports": {
@@ -24,7 +27,13 @@
 		"test-typecheck": "tsc --noEmit --project tsconfig.spec.json",
 		"prepublish": "attw $(npm pack) --ignore-rules false-cjs"
 	},
-	"keywords": ["devalue", "turbo", "stream", "enhanced", "json"],
+	"keywords": [
+		"devalue",
+		"turbo",
+		"stream",
+		"enhanced",
+		"json"
+	],
 	"author": "Jacob Ebey <jacob.ebey@live.com>",
 	"license": "MIT",
 	"repository": {
