@@ -3,6 +3,7 @@ import * as fs from "node:fs";
 import * as fsp from "node:fs/promises";
 import * as path from "node:path";
 import { Readable } from "node:stream";
+import { pathToFileURL } from "node:url";
 
 import preact from "@preact/preset-vite";
 import * as lexer from "es-module-lexer";
@@ -16,7 +17,11 @@ import type * as vite from "vite";
 const toPrerender = ["/", "/about"];
 const preactServerEnvironments = ["server"];
 
-export default defineConfig(() => {
+function dynamicImport(s: string) {
+	return import(pathToFileURL(path.resolve(s)).href);
+}
+
+export default defineConfig(({ mode }) => {
 	let building = false;
 	let scanning = false;
 
@@ -28,23 +33,17 @@ export default defineConfig(() => {
 	let manifest: any;
 
 	return {
-		build: {
-			minify: false,
-		},
 		builder: {
 			async buildApp(builder) {
-				console.log({ PRERENDER: process.env.PRERENDER });
-				if (process.env.PRERENDER === "1") {
-					const [indexHTML, prerenderMod, serverMod] = await Promise.all([
+				if (mode === "prerender") {
+					const [indexHTML, ssrMod, serverMod] = await Promise.all([
 						fsp.readFile("dist/browser/index.html", "utf8"),
-						import(
-							// @ts-expect-error - no types
-							"./dist/prerender/prerender.js"
-						) as Promise<typeof import("./src/prerender")>,
-						import(
-							// @ts-expect-error - no types
-							"./dist/server/server.js"
-						) as Promise<typeof import("./src/server")>,
+						dynamicImport("./dist/ssr/ssr.js") as Promise<
+							typeof import("./src/ssr")
+						>,
+						dynamicImport("./dist/server/server.js") as Promise<
+							typeof import("./src/server")
+						>,
 					]);
 
 					for (const location of toPrerender) {
@@ -54,7 +53,7 @@ export default defineConfig(() => {
 						if (!serverResponse.body) throw new Error("No body");
 						const [serverBodyA, serverBodyB] = serverResponse.body.tee();
 						let dataFilepath = `dist/browser/${location.slice(1)}.data`;
-						const rendered = await prerenderMod.prerender(
+						const rendered = await ssrMod.prerender(
 							indexHTML,
 							serverBodyA.pipeThrough(new TextDecoderStream()),
 						);
@@ -80,7 +79,7 @@ export default defineConfig(() => {
 					scanning = true;
 					await Promise.all([
 						builder.build(builder.environments.client),
-						builder.build(builder.environments.prerender),
+						builder.build(builder.environments.ssr),
 						builder.build(builder.environments.server),
 					]);
 
@@ -110,15 +109,15 @@ export default defineConfig(() => {
 						manifestAsset?.type === "asset" && (manifestAsset.source as string);
 					manifest = JSON.parse(manifestSource || "{}");
 
-					const [prerenderOutput, serverOutput] = await Promise.all([
-						builder.build(builder.environments.prerender),
+					const [ssrOutput, serverOutput] = await Promise.all([
+						builder.build(builder.environments.ssr),
 						builder.build(builder.environments.server),
 					]);
 
 					const clientOutDir = builder.environments.client.config.build.outDir;
 					moveStaticAssets(
-						prerenderOutput as vite.Rollup.RollupOutput,
-						builder.environments.prerender.config.build.outDir,
+						ssrOutput as vite.Rollup.RollupOutput,
+						builder.environments.ssr.config.build.outDir,
 						clientOutDir,
 					);
 					moveStaticAssets(
@@ -141,14 +140,14 @@ export default defineConfig(() => {
 					},
 				},
 			},
-			prerender: {
+			ssr: {
 				consumer: "server",
 				build: {
 					emitAssets: true,
-					outDir: "dist/prerender",
+					outDir: "dist/ssr",
 					ssrManifest: true,
 					rollupOptions: {
-						input: "src/prerender.tsx",
+						input: "src/ssr.tsx",
 					},
 				},
 			},

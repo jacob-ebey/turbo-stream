@@ -1,5 +1,5 @@
 import { h, type ComponentType, type VNode } from "preact";
-import { useState, useLayoutEffect, useEffect } from "preact/hooks";
+import { useState } from "preact/hooks";
 import { lazy, Suspense } from "preact/compat";
 import { createRoot, hydrateRoot } from "preact/compat/client";
 

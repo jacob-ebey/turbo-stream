@@ -1,7 +1,7 @@
 {
 	"type": "module",
 	"scripts": {
-		"build": "PRERENDER=0 vite build && PRERENDER=1 vite build",
+		"build": "vite build && vite build --mode prerender",
 		"dev": "vite",
 		"start": "serve dist/browser"
 	},
