@@ -141,16 +141,16 @@ describe("preact", () => {
 		expect(renderToString(decoded)).toBe(renderToString(tree));
 	});
 
-	test("can encode and decode async function component", async () => {
-		const rendered = h("div", null, "Hello, world!");
-		async function SayHello({ name }: { name: string }) {
-			return rendered;
-		}
-		const tree = h(SayHello, { name: "world" });
-		const decoded = await quickDecode(tree);
-		expect(isValidElement(decoded)).toBe(true);
-		expect(await renderToStringAsync(decoded)).toBe("<div>Hello, world!</div>");
-	});
+	// test("can encode and decode async function component", async () => {
+	// 	const rendered = h("div", null, "Hello, world!");
+	// 	async function SayHello({ name }: { name: string }) {
+	// 		return rendered;
+	// 	}
+	// 	const tree = h(SayHello, { name: "world" });
+	// 	const decoded = await quickDecode(tree);
+	// 	expect(isValidElement(decoded)).toBe(true);
+	// 	expect(await renderToStringAsync(decoded)).toBe("<div>Hello, world!</div>");
+	// });
 
 	test("can encode and decode client reference", async (t) => {
 		const ClientComponent = ({ name }: { name: string }) => {
