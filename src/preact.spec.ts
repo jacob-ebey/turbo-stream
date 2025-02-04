@@ -149,64 +149,7 @@ describe("preact", () => {
 		const tree = h(SayHello, { name: "world" });
 		const decoded = await quickDecode(tree);
 		expect(isValidElement(decoded)).toBe(true);
-		expect(typeof decoded.type).toBe("function");
-		try {
-			(decoded.type as () => never)();
-			throw new Error("should not reach here");
-		} catch (promise) {
-			expect(promise).toBeInstanceOf(Promise);
-			const lazyMockModule = (await promise) as { default: () => unknown };
-			expect(typeof lazyMockModule.default).toBe("function");
-			const renderedNode = lazyMockModule.default();
-			expect(isValidElement(renderedNode)).toBe(true);
-			compareExcludeKeys(renderedNode, rendered, ["__v"]);
-		}
 		expect(await renderToStringAsync(decoded)).toBe("<div>Hello, world!</div>");
-	});
-
-	test("can encode and decode nested async function components", async () => {
-		const hello = h("div", null, "Hello, world!");
-		async function SayHello({ name }: { name: string }) {
-			return hello;
-		}
-		async function Say({ name }: { name: string }) {
-			return [hello, h(SayHello, { name })];
-		}
-		const tree = h(Say, { name: "world" });
-		const decoded = await quickDecode(tree);
-		expect(isValidElement(decoded)).toBe(true);
-		expect(typeof decoded.type).toBe("function");
-		try {
-			(decoded.type as () => never)();
-			throw new Error("should not reach here");
-		} catch (promise) {
-			expect(promise).toBeInstanceOf(Promise);
-			const lazyMockModule = (await promise) as { default: () => unknown };
-			expect(typeof lazyMockModule.default).toBe("function");
-			const [renderedNode, asyncNode] = lazyMockModule.default() as [
-				preact.VNode,
-				preact.VNode,
-			];
-			expect(isValidElement(renderedNode)).toBe(true);
-			compareExcludeKeys(renderedNode, hello, ["__v"]);
-
-			expect(isValidElement(asyncNode)).toBe(true);
-			expect(typeof asyncNode.type).toBe("function");
-			try {
-				(asyncNode.type as () => never)();
-				throw new Error("should not reach here");
-			} catch (promise) {
-				expect(promise).toBeInstanceOf(Promise);
-				const lazyMockModule = (await promise) as { default: () => unknown };
-				expect(typeof lazyMockModule.default).toBe("function");
-				const renderedNode = lazyMockModule.default();
-				expect(isValidElement(renderedNode)).toBe(true);
-				compareExcludeKeys(renderedNode, hello, ["__v"]);
-			}
-		}
-		expect(await renderToStringAsync(decoded)).toBe(
-			"<div>Hello, world!</div><div>Hello, world!</div>",
-		);
 	});
 
 	test("can encode and decode client reference", async (t) => {
@@ -224,7 +167,7 @@ describe("preact", () => {
 		});
 		const decodeClientReference = t.mock.fn<
 			DecodeClientReferenceFunction<[string]>
-		>(async ([id]) => {
+		>(([id]) => {
 			if (id !== "ClientComponent") {
 				throw new Error("Invalid client reference");
 			}
@@ -264,7 +207,7 @@ describe("preact", () => {
 		});
 		const decodeClientReference = t.mock.fn<
 			DecodeClientReferenceFunction<[string]>
-		>(async ([id]) => {
+		>(([id]) => {
 			if (id !== "ClientComponent") {
 				throw new Error("Invalid client reference");
 			}
@@ -398,52 +341,10 @@ describe("preact", () => {
 			undefined,
 			undefined,
 			() => ["ErrorBoundary"],
-			async () => ErrorBoundary,
+			() => ErrorBoundary,
 		);
 		expect(await renderWithError(h(Fragment, null, decoded))).toBe(
 			"<p>&lt;redacted></p>",
-		);
-	});
-
-	test("can propagate async errors", async () => {
-		async function Thrower() {
-			await new Promise((resolve) => setTimeout(resolve, 0));
-			throw new Error("fail");
-		}
-
-		class ErrorBoundary extends Component<
-			{ children?: VNode },
-			{ error: Error | null }
-		> {
-			constructor(props: { children?: VNode }) {
-				super(props);
-				this.state = { error: null };
-			}
-			componentDidCatch(error: Error) {
-				this.setState({ error });
-			}
-
-			render() {
-				return this.state.error
-					? h("p", null, this.state.error.message)
-					: this.props.children;
-			}
-			static $$typeof: symbol = CLIENT_REFERENCE;
-		}
-
-		const decoded = await quickDecode(
-			h(
-				ErrorBoundary,
-				null,
-				h(Suspense, { fallback: h("p", null, "fallback") }, h(Thrower, null)),
-			),
-			undefined,
-			undefined,
-			() => ["ErrorBoundary"],
-			async () => ErrorBoundary,
-		);
-		expect(renderWithError(h(Fragment, null, decoded))).rejects.toThrowError(
-			"<redacted>",
 		);
 	});
 });

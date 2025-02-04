@@ -6,11 +6,22 @@ import {
 
 import { Counter } from "./counter";
 
-async function App() {
+async function App({ url }: { url: URL }) {
 	return (
 		<main>
 			<h1>Hello, Server!</h1>
 			<p>This is an example of PSC (Preact Server Components)</p>
+
+			<ul>
+				<li>
+					<a href="/">Home</a>
+				</li>
+				<li>
+					<a href="/about">About</a>
+				</li>
+			</ul>
+
+			<p>{url.pathname}</p>
 
 			<Counter />
 		</main>
@@ -18,7 +29,7 @@ async function App() {
 }
 
 export const handleRequest = async (request: Request) => {
-	const payloadStream = encode(<App />, {
+	const payloadStream = encode(<App url={new URL(request.url)} />, {
 		encodeClientReference,
 	});
 	return new Response(payloadStream.pipeThrough(new TextEncoderStream()), {

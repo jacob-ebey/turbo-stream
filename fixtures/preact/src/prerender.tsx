@@ -6,6 +6,7 @@ import {
 	decode,
 	type DecodeClientReferenceFunction,
 } from "../../../src/preact";
+// @ts-expect-error - no types
 import { loadClientReference } from "virtual:preact-server/client";
 
 import type { EncodedClientReference } from "./server";

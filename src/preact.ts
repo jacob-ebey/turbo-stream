@@ -1,5 +1,6 @@
 import * as preact from "preact";
 import * as compat from "preact/compat";
+import * as hooks from "preact/hooks";
 
 import * as turbo from "./turbo-stream.js";
 
@@ -35,7 +36,7 @@ export type EncodeServerReferenceFunction<Reference extends ServerReference> = (
 
 export type DecodeClientReferenceFunction<
 	Encoded extends EncodedClientReference,
-> = (encoded: Encoded) => Promise<preact.ComponentType<any>>;
+> = (encoded: Encoded) => preact.ComponentType<any>;
 
 export type DecodeServerReferenceFunction = (
 	encoded: string,
@@ -56,22 +57,13 @@ export type DecodeOptions = turbo.DecodeOptions & {
 let preactDecode = ({
 	decodeClientReference,
 	decodeServerReference,
-}: DecodeOptions = {}): turbo.DecodePlugin =>
-	function (pluginType, keyOrRendered, typeOrProps, props) {
+}: DecodeOptions = {}): turbo.DecodePlugin => {
+	return function (pluginType, keyOrRendered, typeOrProps, props) {
 		if (pluginType === TYPE_CLIENT_REFERENCE) {
 			if (!decodeClientReference) {
 				throw new Error("decodeClientReference implementation not provided");
 			}
-			const decodePromise = decodeClientReference(
-				Array.from(arguments).slice(3),
-			);
-
-			const cc = compat.lazy(async () => {
-				return {
-					default: await decodePromise,
-				};
-			});
-			cc.displayName = "Client Component";
+			const cc = decodeClientReference(Array.from(arguments).slice(3));
 
 			return {
 				value: preact.h(cc, {
@@ -105,19 +97,8 @@ let preactDecode = ({
 				keyOrRendered !== null &&
 				typeof (keyOrRendered as any).then === "function"
 			) {
-				const sc = compat.lazy(() =>
-					(keyOrRendered as Promise<unknown>).then((resolved) => {
-						const rendered = () => resolved as preact.VNode;
-						rendered.displayName = "Resolved Content";
-						return {
-							default: rendered,
-						};
-					}),
-				);
-				(sc as any).displayName = "Async Server Component";
-
 				return {
-					value: preact.h(sc, null),
+					value: keyOrRendered,
 				};
 			}
 			return {
@@ -129,7 +110,7 @@ let preactDecode = ({
 			return {
 				value: preact.h(() => {
 					throw keyOrRendered;
-				}, {}),
+				}, null),
 			};
 		}
 
@@ -151,6 +132,7 @@ let preactDecode = ({
 			};
 		}
 	};
+};
 
 let preactEncode =
 	({
