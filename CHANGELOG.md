@@ -1,5 +1,16 @@
 # Changelog
 
+## [3.0.0](https://github.com/jacob-ebey/turbo-stream/compare/v2.4.1...v3.0.0) (2025-02-04)
+
+
+### ⚠ BREAKING CHANGES
+
+* new encoding format ([#59](https://github.com/jacob-ebey/turbo-stream/issues/59))
+
+### Features
+
+* new encoding format ([#59](https://github.com/jacob-ebey/turbo-stream/issues/59)) ([2bf9709](https://github.com/jacob-ebey/turbo-stream/commit/2bf9709532487873a2ce093ce0b7fd8e921391ae))
+
 ## [2.4.1](https://github.com/jacob-ebey/turbo-stream/compare/v2.4.0...v2.4.1) (2024-09-11)
 
 
