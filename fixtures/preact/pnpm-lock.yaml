@@ -12,6 +12,9 @@ importers:
         specifier: ^10.25.4
         version: 10.25.4
     devDependencies:
+      '@mjackson/node-fetch-server':
+        specifier: ^0.5.1
+        version: 0.5.1
       '@preact/preset-vite':
         specifier: ^2.10.0
         version: 2.10.0(@babel/core@7.26.7)(preact@10.25.4)(vite@6.0.11)
@@ -290,6 +293,9 @@ packages:
 
   '@jridgewell/trace-mapping@0.3.25':
     resolution: {integrity: sha512-vNk6aEwybGtawWmy/PzwnGDOjCkLWSD2wqvjGGAgOAwCGWySYXfYoxt00IJkTF+8Lb57DwOb3Aa0o9CApepiYQ==}
+
+  '@mjackson/node-fetch-server@0.5.1':
+    resolution: {integrity: sha512-0lMJlivCLV0nqPFPalS+EuyAy0ln/jUj/qM+PM5fZ3hqaQSopmToHHQmU/Mdbz3xdxjbg8wm4xHqkzqqTunKkw==}
 
   '@preact/preset-vite@2.10.0':
     resolution: {integrity: sha512-U49rFSfF5h4rL1IYSmtiCe+lHDave9es3JzVnCMKoKF5ZW3Adua34/pkU2bT5vKQ02ek142RUjTwLhwLSgFp6g==}
@@ -1194,6 +1200,8 @@ snapshots:
     dependencies:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.0
+
+  '@mjackson/node-fetch-server@0.5.1': {}
 
   '@preact/preset-vite@2.10.0(@babel/core@7.26.7)(preact@10.25.4)(vite@6.0.11)':
     dependencies:

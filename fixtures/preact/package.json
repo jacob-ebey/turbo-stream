@@ -9,6 +9,7 @@
 		"preact": "^10.25.4"
 	},
 	"devDependencies": {
+		"@mjackson/node-fetch-server": "^0.5.1",
 		"@preact/preset-vite": "^2.10.0",
 		"@types/dom-navigation": "^1.0.4",
 		"es-module-lexer": "^1.6.0",

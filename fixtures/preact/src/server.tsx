@@ -9,8 +9,11 @@ import { Counter } from "./counter";
 async function App({ url }: { url: URL }) {
 	return (
 		<main>
+			<title>Vite + Preact</title>
 			<h1>Hello, Server!</h1>
 			<p>This is an example of PSC (Preact Server Components)</p>
+
+			<Counter />
 
 			<ul>
 				<li>
@@ -23,7 +26,7 @@ async function App({ url }: { url: URL }) {
 
 			<p>{url.pathname}</p>
 
-			<Counter />
+			<Counter key={url.pathname} />
 		</main>
 	);
 }

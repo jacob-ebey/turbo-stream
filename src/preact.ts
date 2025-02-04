@@ -1,6 +1,5 @@
 import * as preact from "preact";
 import * as compat from "preact/compat";
-import * as hooks from "preact/hooks";
 
 import * as turbo from "./turbo-stream.js";
 
@@ -100,9 +99,15 @@ let preactDecode = ({
 				return {
 					value:
 						typeof document === "undefined"
-							? compat.lazy(async () => ({
-									default: await keyOrRendered,
-								}))
+							? preact.h(
+									compat.lazy(async () => {
+										const resolved = await keyOrRendered;
+										return {
+											default: () => resolved,
+										};
+									}),
+									null,
+								)
 							: keyOrRendered,
 				};
 			}

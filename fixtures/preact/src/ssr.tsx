@@ -1,5 +1,5 @@
 import type { ComponentType, VNode } from "preact";
-import { lazy, Suspense } from "preact/compat";
+import { lazy } from "preact/compat";
 import { renderToStringAsync } from "preact-render-to-string";
 
 import {
@@ -39,9 +39,10 @@ export async function prerender(
 		}),
 		readToText(payloadStreamB),
 	]);
+
 	const rendered = await renderToStringAsync(
 		<>
-			<Suspense fallback="">{payload}</Suspense>
+			{/* {payload} */}
 			<script
 				dangerouslySetInnerHTML={{
 					__html: `window.PREACT_STREAM = new ReadableStream({ start(c) { c.enqueue(${escapeHtml(JSON.stringify(inlinePayload))}); c.close(); } });`,
@@ -49,6 +50,7 @@ export async function prerender(
 			/>
 		</>,
 	);
+
 	return html.replace('<div id="app">', `<div id="app">${rendered}`);
 }
 
@@ -59,8 +61,8 @@ const decodeClientReference: DecodeClientReferenceFunction<
 		loadClientReference(encoded).then((Component: any) => ({
 			default: Component,
 		})),
-	) as ComponentType;
-	return Comp;
+	);
+	return Comp as unknown as ComponentType;
 };
 
 // This escapeHtml utility is based on https://github.com/zertosh/htmlescape

@@ -34,9 +34,15 @@ function Root({ initialPayload }: { initialPayload: VNode }) {
 	return <Suspense fallback={payload.last}>{payload.current}</Suspense>;
 }
 
+function getDataURL() {
+	const url = new URL(window.location.href);
+	url.pathname += ".data";
+	return url;
+}
+
 (window.PREACT_STREAM
 	? Promise.resolve(window.PREACT_STREAM)
-	: fetch(window.location.href, {
+	: fetch(getDataURL(), {
 			headers: {
 				accept: "text/x-component",
 			},

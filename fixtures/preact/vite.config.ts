@@ -2,9 +2,9 @@ import * as crypto from "node:crypto";
 import * as fs from "node:fs";
 import * as fsp from "node:fs/promises";
 import * as path from "node:path";
-import { Readable } from "node:stream";
 import { pathToFileURL } from "node:url";
 
+import { createRequestListener } from "@mjackson/node-fetch-server";
 import preact from "@preact/preset-vite";
 import * as lexer from "es-module-lexer";
 import {
@@ -33,6 +33,9 @@ export default defineConfig(({ mode }) => {
 	let manifest: any;
 
 	return {
+		build: {
+			minify: false,
+		},
 		builder: {
 			async buildApp(builder) {
 				if (mode === "prerender") {
@@ -137,6 +140,7 @@ export default defineConfig(({ mode }) => {
 					outDir: "dist/browser",
 					rollupOptions: {
 						input: ["index.html"],
+						preserveEntrySignatures: "exports-only",
 					},
 				},
 			},
@@ -149,6 +153,9 @@ export default defineConfig(({ mode }) => {
 					rollupOptions: {
 						input: "src/ssr.tsx",
 					},
+				},
+				resolve: {
+					noExternal: true,
 				},
 			},
 			server: {
@@ -165,6 +172,9 @@ export default defineConfig(({ mode }) => {
 					createEnvironment(name, config, context) {
 						return createRunnableDevEnvironment(name, config);
 					},
+				},
+				resolve: {
+					noExternal: true,
 				},
 			},
 		},
@@ -183,14 +193,21 @@ export default defineConfig(({ mode }) => {
 							throw new Error("Cannot load client references on the server");
 						}
 						if (this.environment.mode !== "dev") {
-							// if (this.environment.name !== "client") {
-							return `
+							if (this.environment.name !== "client") {
+								return `
 									const clientModules = {
-										${Array.from(foundModules.client)
-											.map(([filename, hash]) => {
-												return `${JSON.stringify(hash)}: () => import(${JSON.stringify(
-													filename,
-												)}),`;
+										${Array.from(foundModules.client.keys())
+											.map((filename) => {
+												return `${JSON.stringify(
+													findClientModule(
+														path.relative(
+															path.resolve(this.environment.config.root),
+															filename,
+														),
+														manifest,
+														this.environment.config.base,
+													).id,
+												)}: () => import(${JSON.stringify(filename)}),`;
 											})
 											.join("  \n")}
 									};
@@ -200,18 +217,18 @@ export default defineConfig(({ mode }) => {
 										return mod[name];
 									}
 								`;
-							// }
+							}
 
-							// return `
-							// 	export async function loadClientReference([id, name, ...chunks]) {
-							// 		const importPromise = import(/* @vite-ignore */ id);
-							// 		for (const chunk of chunks) {
-							// 			import(chunk);
-							// 		}
-							// 		const mod = await importPromise;
-							// 		return mod[name];
-							// 	}
-							// `;
+							return `
+								export async function loadClientReference([id, name, ...chunks]) {
+									const importPromise = import(/* @vite-ignore */ id);
+									for (const chunk of chunks) {
+										import(chunk);
+									}
+									const mod = await importPromise;
+									return mod[name];
+								}
+							`;
 						}
 						return `
 							export async function loadClientReference([id, name]) {
@@ -257,19 +274,23 @@ export default defineConfig(({ mode }) => {
 					const useFor = directiveMatch[1] as "client" | "server";
 
 					const [, exports] = lexer.parse(code, id);
-					let referenceId: string = building
-						? hash
+					const mod =
+						building && this.environment.name !== "client"
+							? findClientModule(
+									path.relative(path.resolve(this.environment.config.root), id),
+									manifest,
+									this.environment.config.base,
+								)
+							: null;
+					let referenceId: string = mod
+						? mod.id
 						: "/" +
 							path
 								.relative(this.environment.config.root, id)
 								.replace(/\\/g, "/");
-					let chunks: string[] = [];
+					let chunks: string[] = mod ? mod.chunks : [];
 
-					// if (building) {
-
-					// }
-
-					if (useFor === "client") {
+					if (useFor === "client" && this.environment.name !== "client") {
 						if (preactServerEnvironments.includes(this.environment.name)) {
 							const newExports = exports
 								.map((exp) =>
@@ -308,29 +329,38 @@ export default defineConfig(({ mode }) => {
 			{
 				name: "dev-server",
 				configureServer(server) {
+					const serverEnv = server.environments
+						.server as RunnableDevEnvironment;
+
+					const listener = createRequestListener(async (request) => {
+						const serverMod =
+							await serverEnv.runner.import<typeof import("./src/server")>(
+								"./src/server.tsx",
+							);
+
+						const url = new URL(request.url);
+						url.pathname = url.pathname.replace(/\.data$/, "");
+
+						return serverMod.handleRequest(
+							new Request(url, {
+								body: request.body,
+								duplex:
+									request.method !== "GET" && request.method !== "HEAD"
+										? "half"
+										: undefined,
+								headers: request.headers,
+								method: request.method,
+								signal: request.signal,
+							} as RequestInit & { duplex?: "half" }),
+						);
+					});
+
 					return () => {
 						server.middlewares.use(async (req, res, next) => {
-							if (req.headers.accept?.match(/\btext\/x-component\b/)) {
+							const url = new URL(req.url ?? "/", "http://localhost");
+							if (url.pathname.endsWith(".data")) {
 								try {
-									const serverEnv = server.environments
-										.server as RunnableDevEnvironment;
-									const serverMod =
-										await serverEnv.runner.import<
-											typeof import("./src/server")
-										>("./src/server.tsx");
-
-									const url = new URL(req.url ?? "/", "http://localhost");
-									url.pathname = url.pathname.replace(/\.data$/, "");
-									// TODO: Actually create a request object
-									const serverResponse = await serverMod.handleRequest(
-										new Request(url),
-									);
-									// TODO: Actually send response
-									if (!serverResponse.body) throw new Error("No body");
-									res.setHeader("Content-Type", "text/x-component");
-									Readable.fromWeb(serverResponse.body as any).pipe(res, {
-										end: true,
-									});
+									listener(req, res);
 								} catch (error) {
 									next(error);
 								}
@@ -360,6 +390,14 @@ function rollupInputsToArray(
 			: rollupInputs
 				? Object.values(rollupInputs)
 				: [];
+}
+
+function findClientModule(forFilename: string, manifest: any, base: string) {
+	const collected = collectChunks(base, forFilename, manifest);
+	return {
+		id: collected[0],
+		chunks: collected.slice(1),
+	};
 }
 
 function collectChunks(
