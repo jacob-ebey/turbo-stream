@@ -96,19 +96,14 @@ let preactDecode = ({
 				keyOrRendered !== null &&
 				typeof (keyOrRendered as any).then === "function"
 			) {
+				const component = compat.lazy(async () => {
+					const resolved = await keyOrRendered;
+					return {
+						default: resolved,
+					};
+				})
 				return {
-					value:
-						typeof document === "undefined"
-							? preact.h(
-									compat.lazy(async () => {
-										const resolved = await keyOrRendered;
-										return {
-											default: () => resolved,
-										};
-									}),
-									null,
-								)
-							: keyOrRendered,
+					value: component
 				};
 			}
 			return {

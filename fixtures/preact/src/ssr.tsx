@@ -42,7 +42,7 @@ export async function prerender(
 
 	const rendered = await renderToStringAsync(
 		<>
-			{/* {payload} */}
+			{payload}
 			<script
 				dangerouslySetInnerHTML={{
 					__html: `window.PREACT_STREAM = new ReadableStream({ start(c) { c.enqueue(${escapeHtml(JSON.stringify(inlinePayload))}); c.close(); } });`,
