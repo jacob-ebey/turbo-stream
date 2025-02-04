@@ -110,10 +110,22 @@ export default defineConfig(() => {
 						manifestAsset?.type === "asset" && (manifestAsset.source as string);
 					manifest = JSON.parse(manifestSource || "{}");
 
-					await Promise.all([
+					const [prerenderOutput, serverOutput] = await Promise.all([
 						builder.build(builder.environments.prerender),
 						builder.build(builder.environments.server),
 					]);
+
+					const clientOutDir = builder.environments.client.config.build.outDir;
+					moveStaticAssets(
+						prerenderOutput as vite.Rollup.RollupOutput,
+						builder.environments.prerender.config.build.outDir,
+						clientOutDir,
+					);
+					moveStaticAssets(
+						serverOutput as vite.Rollup.RollupOutput,
+						builder.environments.server.config.build.outDir,
+						clientOutDir,
+					);
 				}
 			},
 			sharedConfigBuild: true,
@@ -132,7 +144,9 @@ export default defineConfig(() => {
 			prerender: {
 				consumer: "server",
 				build: {
+					emitAssets: true,
 					outDir: "dist/prerender",
+					ssrManifest: true,
 					rollupOptions: {
 						input: "src/prerender.tsx",
 					},
@@ -141,7 +155,9 @@ export default defineConfig(() => {
 			server: {
 				consumer: "server",
 				build: {
+					emitAssets: true,
 					outDir: "dist/server",
+					ssrManifest: true,
 					rollupOptions: {
 						input: "src/server.tsx",
 					},
