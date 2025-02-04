@@ -1,18 +1,18 @@
 {
 	"type": "module",
 	"scripts": {
-		"build": "PRERENDER=0 vite build --app && PRERENDER=1 vite build --app",
-		"preview": "vite preview",
-		"dev": "vite"
+		"build": "PRERENDER=0 vite build && PRERENDER=1 vite build",
+		"dev": "vite",
+		"start": "serve dist/browser"
 	},
 	"dependencies": {
-		"preact": "^10.25.4",
-		"preact-iso": "^2.8.1"
+		"preact": "^10.25.4"
 	},
 	"devDependencies": {
 		"@preact/preset-vite": "^2.10.0",
 		"@types/dom-navigation": "^1.0.4",
 		"es-module-lexer": "^1.6.0",
+		"serve": "^14.2.4",
 		"vite": "^6.0.11"
 	}
 }

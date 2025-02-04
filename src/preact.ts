@@ -98,7 +98,12 @@ let preactDecode = ({
 				typeof (keyOrRendered as any).then === "function"
 			) {
 				return {
-					value: keyOrRendered,
+					value:
+						typeof document === "undefined"
+							? compat.lazy(async () => ({
+									default: await keyOrRendered,
+								}))
+							: keyOrRendered,
 				};
 			}
 			return {

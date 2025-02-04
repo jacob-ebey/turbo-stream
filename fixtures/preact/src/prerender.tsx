@@ -1,5 +1,5 @@
-import type { VNode } from "preact";
-import { Suspense } from "preact/compat";
+import type { ComponentType, VNode } from "preact";
+import { lazy, Suspense } from "preact/compat";
 import { renderToStringAsync } from "preact-render-to-string";
 
 import {
@@ -54,8 +54,13 @@ export async function prerender(
 
 const decodeClientReference: DecodeClientReferenceFunction<
 	EncodedClientReference
-> = async ([id, name]) => {
-	return loadClientReference(id, name);
+> = (encoded) => {
+	const Comp = lazy(() =>
+		loadClientReference(encoded).then((Component: any) => ({
+			default: Component,
+		})),
+	) as ComponentType;
+	return Comp;
 };
 
 // This escapeHtml utility is based on https://github.com/zertosh/htmlescape

@@ -39,8 +39,16 @@ export const handleRequest = async (request: Request) => {
 	});
 };
 
-type ClientReferenceImp = ClientReference & { $$id: string; $$name: string };
-export type EncodedClientReference = [id: string, name: string];
+type ClientReferenceImp = ClientReference & {
+	$$id: string;
+	$$name: string;
+	$$chunks?: string[];
+};
+export type EncodedClientReference = [
+	id: string,
+	name: string,
+	...chunks: string[],
+];
 
 const encodeClientReference: EncodeClientReferenceFunction<
 	ClientReferenceImp,
@@ -49,5 +57,5 @@ const encodeClientReference: EncodeClientReferenceFunction<
 	if (!reference.$$id || !reference.$$name) {
 		throw new Error("Client reference must have $$id and $$name properties");
 	}
-	return [reference.$$id, reference.$$name];
+	return [reference.$$id, reference.$$name, ...(reference.$$chunks ?? [])];
 };

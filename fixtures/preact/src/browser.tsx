@@ -68,7 +68,9 @@ function Root({ initialPayload }: { initialPayload: VNode }) {
 
 			event.intercept({
 				async handler() {
-					const response = await fetch(event.destination.url, {
+					const url = new URL(event.destination.url);
+					url.pathname += ".data";
+					const response = await fetch(url, {
 						headers: {
 							accept: "text/x-component",
 						},
@@ -91,14 +93,14 @@ const cache = new Map<string, ComponentType>();
 
 const decodeClientReference: DecodeClientReferenceFunction<
 	EncodedClientReference
-> = ([id, name]) => {
-	const key = `${id}:${name}`;
+> = (encoded) => {
+	const key = `${encoded[0]}:${encoded[1]}`;
 	const cached = cache.get(key);
 	if (cached) {
 		return cached;
 	}
 	const Comp = lazy(() =>
-		loadClientReference(id, name).then((Component: any) => ({
+		loadClientReference(encoded).then((Component: any) => ({
 			default: Component,
 		})),
 	) as ComponentType;

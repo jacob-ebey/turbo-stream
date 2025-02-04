@@ -1,4 +1,6 @@
-import * as fs from "node:fs/promises";
+import * as crypto from "node:crypto";
+import * as fs from "node:fs";
+import * as fsp from "node:fs/promises";
 import * as path from "node:path";
 import { Readable } from "node:stream";
 
@@ -9,25 +11,32 @@ import {
 	defineConfig,
 	type RunnableDevEnvironment,
 } from "vite";
+import type * as vite from "vite";
 
-const toPrerender = ["/"];
+const toPrerender = ["/", "/about"];
 const preactServerEnvironments = ["server"];
 
 export default defineConfig(() => {
+	let building = false;
 	let scanning = false;
 
 	let foundModules = {
-		client: new Set<string>(),
-		server: new Set<string>(),
+		client: new Map<string, string>(),
+		server: new Map<string, string>(),
 	};
 
+	let manifest: any;
+
 	return {
+		build: {
+			minify: false,
+		},
 		builder: {
 			async buildApp(builder) {
 				console.log({ PRERENDER: process.env.PRERENDER });
 				if (process.env.PRERENDER === "1") {
 					const [indexHTML, prerenderMod, serverMod] = await Promise.all([
-						fs.readFile("dist/browser/index.html", "utf8"),
+						fsp.readFile("dist/browser/index.html", "utf8"),
 						import(
 							// @ts-expect-error - no types
 							"./dist/prerender/prerender.js"
@@ -43,13 +52,27 @@ export default defineConfig(() => {
 						const request = new Request(url.toString());
 						const serverResponse = await serverMod.handleRequest(request);
 						if (!serverResponse.body) throw new Error("No body");
+						const [serverBodyA, serverBodyB] = serverResponse.body.tee();
+						let dataFilepath = `dist/browser/${location.slice(1)}.data`;
 						const rendered = await prerenderMod.prerender(
 							indexHTML,
-							serverResponse.body.pipeThrough(new TextDecoderStream()),
+							serverBodyA.pipeThrough(new TextDecoderStream()),
 						);
 
 						let htmlFilepath = `dist/browser/${location.slice(1)}/index.html`;
-						await fs.writeFile(htmlFilepath, rendered);
+						await Promise.all([
+							fsp
+								.mkdir(path.dirname(htmlFilepath), { recursive: true })
+								.then(() => fsp.writeFile(htmlFilepath, rendered)),
+							fsp
+								.mkdir(path.dirname(htmlFilepath), { recursive: true })
+								.then(async () =>
+									fsp.writeFile(
+										dataFilepath,
+										await new Response(serverBodyB).text(),
+									),
+								),
+						]);
 					}
 				} else {
 					console.log("Scanning app...");
@@ -64,8 +87,30 @@ export default defineConfig(() => {
 					scanning = false;
 
 					console.log("Building app...");
+					building = true;
+
+					builder.environments.client.config.build.rollupOptions.input =
+						Array.from(
+							new Set([
+								...rollupInputsToArray(
+									builder.environments.client.config.build.rollupOptions.input,
+								),
+								...Array.from(foundModules.client.keys()),
+							]),
+						);
+
+					const browserOutput = (await builder.build(
+						builder.environments.client,
+					)) as vite.Rollup.RollupOutput;
+
+					const manifestAsset = browserOutput?.output.find(
+						(asset) => asset.fileName === ".vite/manifest.json",
+					);
+					const manifestSource =
+						manifestAsset?.type === "asset" && (manifestAsset.source as string);
+					manifest = JSON.parse(manifestSource || "{}");
+
 					await Promise.all([
-						builder.build(builder.environments.client),
 						builder.build(builder.environments.prerender),
 						builder.build(builder.environments.server),
 					]);
@@ -77,9 +122,10 @@ export default defineConfig(() => {
 		environments: {
 			client: {
 				build: {
+					manifest: true,
 					outDir: "dist/browser",
 					rollupOptions: {
-						input: "index.html",
+						input: ["index.html"],
 					},
 				},
 			},
@@ -122,12 +168,38 @@ export default defineConfig(() => {
 							throw new Error("Cannot load client references on the server");
 						}
 						if (this.environment.mode !== "dev") {
-							throw new Error(
-								"Client reference loading is not yet supported in production",
-							);
+							// if (this.environment.name !== "client") {
+							return `
+									const clientModules = {
+										${Array.from(foundModules.client)
+											.map(([filename, hash]) => {
+												return `${JSON.stringify(hash)}: () => import(${JSON.stringify(
+													filename,
+												)}),`;
+											})
+											.join("  \n")}
+									};
+
+									export async function loadClientReference([id, name, ...chunks]) {
+										const mod = await clientModules[id]();
+										return mod[name];
+									}
+								`;
+							// }
+
+							// return `
+							// 	export async function loadClientReference([id, name, ...chunks]) {
+							// 		const importPromise = import(/* @vite-ignore */ id);
+							// 		for (const chunk of chunks) {
+							// 			import(chunk);
+							// 		}
+							// 		const mod = await importPromise;
+							// 		return mod[name];
+							// 	}
+							// `;
 						}
 						return `
-							export async function loadClientReference(id, name) {
+							export async function loadClientReference([id, name]) {
 								const mod = await import(/* @vite-ignore */ id);
 								return mod[name];
 							}
@@ -139,10 +211,15 @@ export default defineConfig(() => {
 
 					const directiveMatch = code.match(/['"]use (client|server)['"]/);
 
+					const hash = crypto
+						.createHash("sha256")
+						.update(id)
+						.digest("hex")
+						.slice(0, 8);
 					if (scanning) {
 						if (directiveMatch) {
 							const useFor = directiveMatch[1] as "client" | "server";
-							foundModules[useFor].add(id);
+							foundModules[useFor].set(id, hash);
 						}
 
 						const [imports, exports] = lexer.parse(code, id);
@@ -165,17 +242,25 @@ export default defineConfig(() => {
 					const useFor = directiveMatch[1] as "client" | "server";
 
 					const [, exports] = lexer.parse(code, id);
-					const referenceId =
-						"/" +
-						path.relative(this.environment.config.root, id).replace(/\\/g, "/");
+					let referenceId: string = building
+						? hash
+						: "/" +
+							path
+								.relative(this.environment.config.root, id)
+								.replace(/\\/g, "/");
+					let chunks: string[] = [];
+
+					// if (building) {
+
+					// }
 
 					if (useFor === "client") {
 						if (preactServerEnvironments.includes(this.environment.name)) {
 							const newExports = exports
 								.map((exp) =>
 									exp.n === "default"
-										? `export default { $$typeof: CLIENT_REFERENCE, $$id: ${JSON.stringify(referenceId)}, $$name: ${JSON.stringify(exp.n)} };`
-										: `export const ${exp.n} = { $$typeof: CLIENT_REFERENCE, $$id: ${JSON.stringify(referenceId)}, $$name: ${JSON.stringify(exp.n)} };`,
+										? `export default { $$typeof: CLIENT_REFERENCE, $$id: ${JSON.stringify(referenceId)}, $$name: ${JSON.stringify(exp.n)}, $$chunks: ${JSON.stringify(chunks)} };`
+										: `export const ${exp.n} = { $$typeof: CLIENT_REFERENCE, $$id: ${JSON.stringify(referenceId)}, $$name: ${JSON.stringify(exp.n)}, $$chunks: ${JSON.stringify(chunks)} };`,
 								)
 								.join("\n");
 
@@ -218,9 +303,12 @@ export default defineConfig(() => {
 										await serverEnv.runner.import<
 											typeof import("./src/server")
 										>("./src/server.tsx");
+
+									const url = new URL(req.url ?? "/", "http://localhost");
+									url.pathname = url.pathname.replace(/\.data$/, "");
 									// TODO: Actually create a request object
 									const serverResponse = await serverMod.handleRequest(
-										new Request(new URL(req.url ?? "/", "http://localhost")),
+										new Request(url),
 									);
 									// TODO: Actually send response
 									if (!serverResponse.body) throw new Error("No body");
@@ -245,4 +333,60 @@ export default defineConfig(() => {
 const jsModuleExtensions = [".js", ".mjs", ".jsx", ".ts", ".mts", ".tsx"];
 function isJavaScriptModule(id: string) {
 	return jsModuleExtensions.some((ext) => id.endsWith(ext));
+}
+
+function rollupInputsToArray(
+	rollupInputs: vite.Rollup.InputOption | undefined,
+) {
+	return Array.isArray(rollupInputs)
+		? rollupInputs
+		: typeof rollupInputs === "string"
+			? [rollupInputs]
+			: rollupInputs
+				? Object.values(rollupInputs)
+				: [];
+}
+
+function collectChunks(
+	base: string,
+	forFilename: string,
+	manifest: Record<string, { file: string; imports: string[] }>,
+	collected: Set<string> = new Set(),
+) {
+	if (manifest[forFilename]) {
+		collected.add(base + manifest[forFilename].file);
+		for (const imp of manifest[forFilename].imports ?? []) {
+			collectChunks(base, imp, manifest, collected);
+		}
+	}
+
+	return Array.from(collected);
+}
+
+function moveStaticAssets(
+	output: vite.Rollup.RollupOutput,
+	outDir: string,
+	clientOutDir: string,
+) {
+	const manifestAsset = output.output.find(
+		(asset) => asset.fileName === ".vite/ssr-manifest.json",
+	);
+	if (!manifestAsset || manifestAsset.type !== "asset")
+		throw new Error("could not find manifest");
+	const manifest = JSON.parse(manifestAsset.source as string);
+
+	const processed = new Set<string>();
+	for (const assets of Object.values(manifest) as string[][]) {
+		for (const asset of assets) {
+			const fullPath = path.join(outDir, asset.slice(1));
+
+			if (asset.endsWith(".js") || processed.has(fullPath)) continue;
+			processed.add(fullPath);
+
+			if (!fs.existsSync(fullPath)) continue;
+
+			const relative = path.relative(outDir, fullPath);
+			fs.renameSync(fullPath, path.join(clientOutDir, relative));
+		}
+	}
 }
