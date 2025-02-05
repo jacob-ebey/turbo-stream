@@ -1,0 +1,24 @@
+diff --git a/dist/node-fetch-server.cjs b/dist/node-fetch-server.cjs
+index 81b128d658c9ec81659ad661c250af54c75e6011..fdddb3f06f6bf97f8c42017e49011af79f85e415 100644
+--- a/dist/node-fetch-server.cjs
++++ b/dist/node-fetch-server.cjs
+@@ -129,6 +129,7 @@ function createHeaders(req) {
+   let headers = new Headers();
+   let rawHeaders = req.rawHeaders;
+   for (let i = 0; i < rawHeaders.length; i += 2) {
++    if (rawHeaders[i].startsWith(":")) continue;
+     headers.append(rawHeaders[i], rawHeaders[i + 1]);
+   }
+   return headers;
+diff --git a/dist/node-fetch-server.js b/dist/node-fetch-server.js
+index 94b4d8a12f07c41a914b24a1b69a28545d186f4e..8e5ef60ae135b844fa528a37ddd18106dd3c1423 100644
+--- a/dist/node-fetch-server.js
++++ b/dist/node-fetch-server.js
+@@ -100,6 +100,7 @@ function createHeaders(req) {
+   let headers = new Headers();
+   let rawHeaders = req.rawHeaders;
+   for (let i = 0; i < rawHeaders.length; i += 2) {
++    if (rawHeaders[i].startsWith(":")) continue;
+     headers.append(rawHeaders[i], rawHeaders[i + 1]);
+   }
+   return headers;

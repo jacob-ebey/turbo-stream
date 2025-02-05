@@ -127,7 +127,11 @@ const decodeClientReference: DecodeClientReferenceFunction<
 
 const decodeServerReference: DecodeServerReferenceFunction = (id) => {
 	return async (...args: unknown[]) => {
-		const body = await readToString(encode(args));
+		const encoded = encode(args);
+		const body =
+			window.location.protocol !== "https:"
+				? await readToString(encoded)
+				: encoded.pipeThrough(new TextEncoderStream());
 		const response = await fetch(window.location.href, {
 			body,
 			headers: {
@@ -136,7 +140,8 @@ const decodeServerReference: DecodeServerReferenceFunction = (id) => {
 				"psc-action": id,
 			},
 			method: "POST",
-		});
+			duplex: "half",
+		} as RequestInit & { duplex: "half" });
 		if (!response.body) throw new Error("No body");
 		const payload = await decode<ActionPayload>(
 			response.body.pipeThrough(new TextDecoderStream()),

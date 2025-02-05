@@ -14,6 +14,7 @@ import {
 	type RunnableDevEnvironment,
 } from "vite";
 import type * as vite from "vite";
+import mkcert from "vite-plugin-mkcert";
 import tsconfigPaths from "vite-tsconfig-paths";
 
 const toPrerender = ["/", "/about"];
@@ -35,6 +36,9 @@ export default defineConfig(({ mode }) => {
 	let manifest: any;
 
 	return {
+		server: {
+			https: true,
+		},
 		resolve: {
 			dedupe: ["preact"],
 		},
@@ -196,6 +200,7 @@ export default defineConfig(({ mode }) => {
 			},
 		},
 		plugins: [
+			mkcert(),
 			tsconfigPaths(),
 			tailwindcss(),
 			preact({}),
