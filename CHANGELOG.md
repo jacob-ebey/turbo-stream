@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.0.1](https://github.com/jacob-ebey/turbo-stream/compare/v3.0.0...v3.0.1) (2025-02-05)
+
+
+### Bug Fixes
+
+* reset subMode state ([#65](https://github.com/jacob-ebey/turbo-stream/issues/65)) ([7088bb7](https://github.com/jacob-ebey/turbo-stream/commit/7088bb782e9391617026e24f4901e685357b0ac0))
+
 ## [3.0.0](https://github.com/jacob-ebey/turbo-stream/compare/v2.4.1...v3.0.0) (2025-02-04)
 
 
