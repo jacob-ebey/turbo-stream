@@ -356,31 +356,39 @@ export async function decode<T>(
 				} else if (charCode === 117) {
 					// u
 					releaseValue(undefined, 0);
+					subMode = SUB_MODE_UNKNOWN;
 				} else if (charCode === 110) {
 					// n
 					i += 3;
 					releaseValue(null, 0);
+					subMode = SUB_MODE_UNKNOWN;
 				} else if (charCode === 116) {
 					// t
 					i += 3;
 					releaseValue(true, 0);
+					subMode = SUB_MODE_UNKNOWN;
 				} else if (charCode === 102) {
 					// f
 					i += 4;
 					releaseValue(false, 0);
+					subMode = SUB_MODE_UNKNOWN;
 				} else if (charCode === 78) {
 					// N
 					i += 2;
 					releaseValue(Number.NaN, 0);
+					subMode = SUB_MODE_UNKNOWN;
 				} else if (charCode === 73) {
 					// I
 					releaseValue(Number.POSITIVE_INFINITY, 0);
+					subMode = SUB_MODE_UNKNOWN;
 				} else if (charCode === 105) {
 					// i
 					releaseValue(Number.NEGATIVE_INFINITY, 0);
+					subMode = SUB_MODE_UNKNOWN;
 				} else if (charCode === 122) {
 					// z
 					releaseValue(-0, 0);
+					subMode = SUB_MODE_UNKNOWN;
 				} else if (charCode === 98) {
 					// b
 					subMode = SUB_MODE_BIGINT;
