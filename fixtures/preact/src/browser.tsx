@@ -1,5 +1,5 @@
 import { h, type ComponentType, type VNode } from "preact";
-import { useState } from "preact/hooks";
+import { useEffect, useState } from "preact/hooks";
 import { lazy, Suspense } from "preact/compat";
 import { createRoot, hydrateRoot } from "preact/compat/client";
 
@@ -22,7 +22,7 @@ declare global {
 
 let setPayload: (payload: VNode) => void;
 
-function Root({ initialPayload }: { initialPayload: VNode }) {
+function Router({ initialPayload }: { initialPayload: VNode }) {
 	const [payload, _setPayload] = useState<{
 		current: VNode;
 		last: VNode | null;
@@ -33,6 +33,48 @@ function Root({ initialPayload }: { initialPayload: VNode }) {
 	setPayload = (current: VNode) => {
 		_setPayload((last) => ({ current, last: last.current }));
 	};
+
+	useEffect(() => {
+		if (window.navigation) {
+			const onNavigate = (event: NavigateEvent) => {
+				if (
+					!event.canIntercept ||
+					event.downloadRequest ||
+					!event.userInitiated ||
+					event.defaultPrevented ||
+					new URL(event.destination.url).origin !== window.location.origin
+				) {
+					return;
+				}
+
+				event.intercept({
+					async handler() {
+						const url = new URL(event.destination.url);
+						url.pathname += ".data";
+						const response = await fetch(url, {
+							headers: {
+								accept: "text/x-component",
+							},
+						});
+						if (!response.body) throw new Error("No body");
+						const payloadStream = response.body.pipeThrough(
+							new TextDecoderStream(),
+						);
+						const payload = await decode<VNode>(payloadStream, {
+							decodeClientReference,
+							decodeServerReference,
+						});
+						setPayload(payload);
+					},
+				});
+			};
+			window.navigation.addEventListener("navigate", onNavigate);
+			return () => {
+				window.navigation.removeEventListener("navigate", onNavigate);
+			};
+		}
+	}, []);
+
 	return <Suspense fallback={payload.last}>{payload.current}</Suspense>;
 }
 
@@ -58,44 +100,9 @@ function getDataURL() {
 	const app = document.getElementById("app");
 	if (!app) throw new Error("No #app element");
 	if (window.PREACT_STREAM) {
-		hydrateRoot(app, h(Root, { initialPayload: payload }));
+		hydrateRoot(app, h(Router, { initialPayload: payload }));
 	} else {
-		createRoot(app).render(h(Root, { initialPayload: payload }));
-	}
-
-	if (window.navigation) {
-		window.navigation.addEventListener("navigate", (event) => {
-			if (
-				!event.canIntercept ||
-				event.downloadRequest ||
-				!event.userInitiated ||
-				event.defaultPrevented ||
-				new URL(event.destination.url).origin !== window.location.origin
-			) {
-				return;
-			}
-
-			event.intercept({
-				async handler() {
-					const url = new URL(event.destination.url);
-					url.pathname += ".data";
-					const response = await fetch(url, {
-						headers: {
-							accept: "text/x-component",
-						},
-					});
-					if (!response.body) throw new Error("No body");
-					const payloadStream = response.body.pipeThrough(
-						new TextDecoderStream(),
-					);
-					const payload = await decode<VNode>(payloadStream, {
-						decodeClientReference,
-						decodeServerReference,
-					});
-					setPayload(payload);
-				},
-			});
-		});
+		createRoot(app).render(h(Router, { initialPayload: payload }));
 	}
 });
 

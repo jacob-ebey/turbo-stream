@@ -1,5 +1,6 @@
-import express from "express";
 import { createRequestListener } from "@mjackson/node-fetch-server";
+import compression from "compression";
+import express from "express";
 
 import * as serverMod from "./dist/server/server.js";
 
@@ -9,13 +10,19 @@ const listener = createRequestListener(async (request) => {
 
 const app = express();
 
+app.use(compression());
+
 app.use(
 	express.static("dist/browser/assets", {
 		immutable: true,
 		maxAge: "1y",
 	}),
 );
-app.use(express.static("dist/browser"));
+app.use(
+	express.static("dist/browser", {
+		dotfiles: "allow",
+	}),
+);
 
 app.use((req, res, next) => {
 	if (req.method === "POST" && req.headers["psc-action"]) {

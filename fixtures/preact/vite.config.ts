@@ -35,9 +35,6 @@ export default defineConfig(({ mode }) => {
 	let manifest: any;
 
 	return {
-		build: {
-			minify: false,
-		},
 		resolve: {
 			dedupe: ["preact"],
 		},
@@ -132,6 +129,11 @@ export default defineConfig(({ mode }) => {
 						serverOutput as vite.Rollup.RollupOutput,
 						builder.environments.server.config.build.outDir,
 						clientOutDir,
+					);
+
+					await fsp.rm(
+						path.join(builder.environments.client.config.build.outDir, ".vite"),
+						{ recursive: true },
 					);
 				}
 			},

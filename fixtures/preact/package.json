@@ -11,6 +11,7 @@
 		"@radix-ui/react-slot": "^1.1.1",
 		"class-variance-authority": "0.7.1",
 		"clsx": "^2.1.1",
+		"compression": "^1.7.5",
 		"express": "^4.21.2",
 		"preact": "^10.25.4",
 		"tailwind-merge": "^3.0.1"

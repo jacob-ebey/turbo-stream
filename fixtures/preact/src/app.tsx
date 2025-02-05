@@ -9,7 +9,7 @@ import { Label } from "~/components/ui/label";
 let name = "World";
 
 export async function sayHello(formData: FormData) {
-	name = String(formData.get("name")).trim() || name;
+	name = String(formData.get("name")).trim() || "World";
 }
 
 export async function App({ url }: { url: URL }) {
