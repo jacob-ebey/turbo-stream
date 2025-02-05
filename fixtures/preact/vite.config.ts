@@ -42,7 +42,7 @@ export default defineConfig(({ mode }) => {
 			async buildApp(builder) {
 				if (mode === "prerender") {
 					const [indexHTML, ssrMod, serverMod] = await Promise.all([
-						fsp.readFile("dist/browser/index.html", "utf8"),
+						fsp.readFile("dist/browser/__template.html", "utf8"),
 						dynamicImport("./dist/ssr/ssr.js") as Promise<
 							typeof import("./src/ssr")
 						>,
@@ -131,6 +131,16 @@ export default defineConfig(({ mode }) => {
 						clientOutDir,
 					);
 
+					await fsp.copyFile(
+						path.join(
+							builder.environments.client.config.build.outDir,
+							"index.html",
+						),
+						path.join(
+							builder.environments.client.config.build.outDir,
+							"__template.html",
+						),
+					);
 					await fsp.rm(
 						path.join(builder.environments.client.config.build.outDir, ".vite"),
 						{ recursive: true },
@@ -274,7 +284,7 @@ export default defineConfig(({ mode }) => {
 						return `
 							export async function loadServerReference(id) {
 								const [modId, ...rest] = id.split("#");
-								const mod = await import(modId);
+								const mod = await import(/* @vite-ignore */ modId);
 								return mod[rest.join("#")];
 							}
 						`;
