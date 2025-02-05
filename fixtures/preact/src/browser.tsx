@@ -5,12 +5,14 @@ import { createRoot, hydrateRoot } from "preact/compat/client";
 
 import {
 	decode,
+	encode,
+	type DecodeServerReferenceFunction,
 	type DecodeClientReferenceFunction,
-} from "../../../src/preact";
+} from "turbo-stream/preact";
 // @ts-expect-error - no types
 import { loadClientReference } from "virtual:preact-server/client";
 
-import type { EncodedClientReference } from "./server";
+import type { ActionPayload, EncodedClientReference } from "./server";
 
 declare global {
 	interface Window {
@@ -51,6 +53,7 @@ function getDataURL() {
 	if (!payloadStream) throw new Error("No body");
 	const payload = await decode<VNode>(payloadStream, {
 		decodeClientReference,
+		decodeServerReference,
 	});
 	const app = document.getElementById("app");
 	if (!app) throw new Error("No #app element");
@@ -87,6 +90,7 @@ function getDataURL() {
 					);
 					const payload = await decode<VNode>(payloadStream, {
 						decodeClientReference,
+						decodeServerReference,
 					});
 					setPayload(payload);
 				},
@@ -112,4 +116,48 @@ const decodeClientReference: DecodeClientReferenceFunction<
 	) as ComponentType;
 	cache.set(key, Comp);
 	return Comp;
+};
+
+const decodeServerReference: DecodeServerReferenceFunction = (id) => {
+	return async (...args: unknown[]) => {
+		const body = await readToString(encode(args));
+		const response = await fetch(window.location.href, {
+			body,
+			headers: {
+				accept: "text/x-component",
+				"content-type": "text/x-component",
+				"psc-action": id,
+			},
+			method: "POST",
+		});
+		if (!response.body) throw new Error("No body");
+		const payload = await decode<ActionPayload>(
+			response.body.pipeThrough(new TextDecoderStream()),
+			{
+				decodeClientReference,
+				decodeServerReference,
+			},
+		);
+
+		Promise.resolve(payload.root).then((root) => setPayload(root));
+
+		return payload.result;
+	};
+};
+
+const readToString = async (stream: ReadableStream<string>) => {
+	const reader = stream.getReader();
+	try {
+		let result = "";
+		while (true) {
+			const { done, value } = await reader.read();
+			if (done) {
+				break;
+			}
+			result += value;
+		}
+		return result;
+	} finally {
+		reader.releaseLock();
+	}
 };

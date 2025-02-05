@@ -5,6 +5,11 @@
 		"moduleResolution": "bundler",
 		"strict": true,
 		"jsx": "react-jsx",
-		"jsxImportSource": "preact"
+		"jsxImportSource": "preact",
+		"rootDir": "../../",
+		"paths": {
+			"~/*": ["./src/*"],
+			"turbo-stream/preact": ["../../src/preact.ts"]
+		}
 	}
 }

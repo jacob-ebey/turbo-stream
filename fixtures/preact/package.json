@@ -3,17 +3,28 @@
 	"scripts": {
 		"build": "vite build && vite build --mode prerender",
 		"dev": "vite",
-		"start": "serve dist/browser"
+		"start": "node server.js"
 	},
 	"dependencies": {
-		"preact": "^10.25.4"
+		"@mjackson/node-fetch-server": "0.5.1",
+		"@radix-ui/react-label": "^2.1.1",
+		"@radix-ui/react-slot": "^1.1.1",
+		"class-variance-authority": "0.7.1",
+		"clsx": "^2.1.1",
+		"express": "^4.21.2",
+		"preact": "^10.25.4",
+		"tailwind-merge": "^3.0.1"
 	},
 	"devDependencies": {
-		"@mjackson/node-fetch-server": "^0.5.1",
 		"@preact/preset-vite": "^2.10.0",
+		"@tailwindcss/typography": "^0.5.16",
+		"@tailwindcss/vite": "^4.0.3",
 		"@types/dom-navigation": "^1.0.4",
 		"es-module-lexer": "^1.6.0",
 		"serve": "^14.2.4",
-		"vite": "^6.0.11"
+		"tailwindcss": "^4.0.3",
+		"tailwindcss-animate": "^1.0.7",
+		"vite": "^6.0.11",
+		"vite-tsconfig-paths": "^5.1.4"
 	}
 }

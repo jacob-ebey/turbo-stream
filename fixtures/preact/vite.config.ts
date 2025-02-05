@@ -7,12 +7,14 @@ import { pathToFileURL } from "node:url";
 import { createRequestListener } from "@mjackson/node-fetch-server";
 import preact from "@preact/preset-vite";
 import * as lexer from "es-module-lexer";
+import tailwindcss from "@tailwindcss/vite";
 import {
 	createRunnableDevEnvironment,
 	defineConfig,
 	type RunnableDevEnvironment,
 } from "vite";
 import type * as vite from "vite";
+import tsconfigPaths from "vite-tsconfig-paths";
 
 const toPrerender = ["/", "/about"];
 const preactServerEnvironments = ["server"];
@@ -182,12 +184,17 @@ export default defineConfig(({ mode }) => {
 			},
 		},
 		plugins: [
+			tsconfigPaths(),
+			tailwindcss(),
 			preact({}),
 			{
 				name: "preact-server",
 				resolveId(id) {
 					if (id === "virtual:preact-server/client") {
 						return "\0virtual:preact-server/client";
+					}
+					if (id === "virtual:preact-server/server") {
+						return "\0virtual:preact-server/server";
 					}
 				},
 				load(id) {
@@ -226,7 +233,7 @@ export default defineConfig(({ mode }) => {
 								export async function loadClientReference([id, name, ...chunks]) {
 									const importPromise = import(/* @vite-ignore */ id);
 									for (const chunk of chunks) {
-										import(chunk);
+										import(/* @vite-ignore */ chunk);
 									}
 									const mod = await importPromise;
 									return mod[name];
@@ -237,6 +244,36 @@ export default defineConfig(({ mode }) => {
 							export async function loadClientReference([id, name]) {
 								const mod = await import(/* @vite-ignore */ id);
 								return mod[name];
+							}
+						`;
+					}
+
+					if (id === "\0virtual:preact-server/server") {
+						if (this.environment.mode !== "dev") {
+							return `
+								const serverModules = {
+									${Array.from(foundModules.server.entries())
+										.map(([filename, id]) => {
+											return `${JSON.stringify(
+												id,
+											)}: () => import(${JSON.stringify(filename)}),`;
+										})
+										.join("  \n")}
+								};
+								
+								export async function loadServerReference(id) {
+									const [modId, ...rest] = id.split("#");
+									const mod = await serverModules[modId]();
+									return mod[rest.join("#")];
+								}
+							`;
+						}
+
+						return `
+							export async function loadServerReference(id) {
+								const [modId, ...rest] = id.split("#");
+								const mod = await import(modId);
+								return mod[rest.join("#")];
 							}
 						`;
 					}
@@ -306,15 +343,23 @@ export default defineConfig(({ mode }) => {
 							return `const CLIENT_REFERENCE = Symbol.for("preact.client.reference");\n${newExports}`;
 						}
 					} else if (useFor === "server") {
+						referenceId =
+							this.environment.mode === "dev"
+								? referenceId
+								: (foundModules.server.get(id) as string);
+						if (!referenceId) {
+							throw new Error(`Could not find server reference ID for ${id}`);
+						}
 						if (preactServerEnvironments.includes(this.environment.name)) {
 							const markExports = exports
-								.map(
-									(exp) =>
-										`if (typeof ${exp.n} === "function") { ${exp.n}.$$typeof = SERVER_REFERENCE; ${exp.n}.$$id = ${JSON.stringify(referenceId)}; , $$name: ${JSON.stringify(exp.n)} }`,
+								.map((exp) =>
+									exp.n === "default"
+										? "// default export not supported as server reference"
+										: `if (typeof ${exp.n} === "function") { ${exp.n}.$$typeof = SERVER_REFERENCE; ${exp.n}.$$id = ${JSON.stringify(referenceId)}; ${exp.n}.$$name = ${JSON.stringify(exp.n)}; }`,
 								)
 								.join("\n");
 
-							return `${code}\n${markExports}`;
+							return `${code}\nconst SERVER_REFERENCE = Symbol.for("preact.server.reference");\n${markExports}`;
 						}
 
 						const newExports = exports
@@ -361,7 +406,7 @@ export default defineConfig(({ mode }) => {
 					return () => {
 						server.middlewares.use(async (req, res, next) => {
 							const url = new URL(req.url ?? "/", "http://localhost");
-							if (url.pathname.endsWith(".data")) {
+							if (url.pathname.endsWith(".data") || req.headers["psc-action"]) {
 								try {
 									listener(req, res);
 								} catch (error) {

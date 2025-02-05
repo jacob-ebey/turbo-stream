@@ -8,7 +8,6 @@ import {
 	options,
 	type VNode,
 } from "preact";
-import { Suspense } from "preact/compat";
 import { renderToString, renderToStringAsync } from "preact-render-to-string";
 
 import type { DecodePlugin } from "./decode.js";
@@ -141,16 +140,30 @@ describe("preact", () => {
 		expect(renderToString(decoded)).toBe(renderToString(tree));
 	});
 
-	// test("can encode and decode async function component", async () => {
-	// 	const rendered = h("div", null, "Hello, world!");
-	// 	async function SayHello({ name }: { name: string }) {
-	// 		return rendered;
-	// 	}
-	// 	const tree = h(SayHello, { name: "world" });
-	// 	const decoded = await quickDecode(tree);
-	// 	expect(isValidElement(decoded)).toBe(true);
-	// 	expect(await renderToStringAsync(decoded)).toBe("<div>Hello, world!</div>");
-	// });
+	test("can encode and decode async function component", async () => {
+		async function SayHello({ name }: { name: string }) {
+			return h("div", null, "Hello, world!");
+		}
+		const tree = h(SayHello, { name: "world" });
+		const decoded = await quickDecode(tree);
+		expect(isValidElement(decoded)).toBe(true);
+		expect(await renderToStringAsync(decoded)).toBe("<div>Hello, world!</div>");
+	});
+
+	test("as object value", async () => {
+		async function SayHello({ name }: { name: string }) {
+			return h("div", null, "Hello, world!");
+		}
+		const tree = h(SayHello, { name: "world" });
+		const decoded = await quickDecode({
+			tree,
+			foo: Promise.resolve(undefined),
+		});
+		expect(isValidElement(await decoded.tree)).toBe(true);
+		expect(await renderToStringAsync(await decoded.tree)).toBe(
+			"<div>Hello, world!</div>",
+		);
+	});
 
 	test("can encode and decode client reference", async (t) => {
 		const ClientComponent = ({ name }: { name: string }) => {

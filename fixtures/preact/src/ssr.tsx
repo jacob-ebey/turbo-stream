@@ -1,32 +1,16 @@
 import type { ComponentType, VNode } from "preact";
-import { lazy, createElement, Fragment } from "preact/compat";
+import { lazy } from "preact/compat";
 import { renderToStringAsync } from "preact-render-to-string";
 
 import {
 	decode,
+	type DecodeServerReferenceFunction,
 	type DecodeClientReferenceFunction,
-} from "../../../src/preact";
+} from "turbo-stream/preact";
 // @ts-expect-error - no types
 import { loadClientReference } from "virtual:preact-server/client";
 
 import type { EncodedClientReference } from "./server";
-
-async function readToText(stream: ReadableStream<string>) {
-	let result = "";
-	let reader = stream.getReader();
-	try {
-		while (true) {
-			const { done, value } = await reader.read();
-			if (done) {
-				break;
-			}
-			result += value;
-		}
-		return result;
-	} finally {
-		reader.releaseLock();
-	}
-}
 
 export async function prerender(
 	html: string,
@@ -36,6 +20,7 @@ export async function prerender(
 	const [payload, inlinePayload] = await Promise.all([
 		decode<VNode>(payloadStreamA, {
 			decodeClientReference,
+			decodeServerReference,
 		}),
 		readToText(payloadStreamB),
 	]);
@@ -72,6 +57,29 @@ const decodeClientReference: DecodeClientReferenceFunction<
 	cache.set(key, Comp);
 	return Comp;
 };
+
+const decodeServerReference: DecodeServerReferenceFunction = () => {
+	return () => {
+		throw new Error("Server references are not supported during prerendering");
+	};
+};
+
+async function readToText(stream: ReadableStream<string>) {
+	let result = "";
+	let reader = stream.getReader();
+	try {
+		while (true) {
+			const { done, value } = await reader.read();
+			if (done) {
+				break;
+			}
+			result += value;
+		}
+		return result;
+	} finally {
+		reader.releaseLock();
+	}
+}
 
 // This escapeHtml utility is based on https://github.com/zertosh/htmlescape
 // License: https://github.com/zertosh/htmlescape/blob/0527ca7156a524d256101bb310a9f970f63078ad/LICENSE
