@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.1.0](https://github.com/jacob-ebey/turbo-stream/compare/v3.0.1...v3.1.0) (2025-02-07)
+
+
+### Features
+
+* allow for custom error redaction ([#68](https://github.com/jacob-ebey/turbo-stream/issues/68)) ([e128d83](https://github.com/jacob-ebey/turbo-stream/commit/e128d83b991865f443448f117374814f6fdc9ad5))
+
 ## [3.0.1](https://github.com/jacob-ebey/turbo-stream/compare/v3.0.0...v3.0.1) (2025-02-05)
 
 
