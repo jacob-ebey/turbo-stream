@@ -65,7 +65,7 @@ export type EncodePlugin = (
 
 export type EncodeOptions = {
 	plugins?: EncodePlugin[];
-	redactErrors?: boolean;
+	redactErrors?: boolean | string;
 	signal?: AbortSignal;
 };
 
@@ -139,9 +139,9 @@ export function encode(
 								let result: IteratorResult<unknown>;
 								do {
 									result = await iterator.next();
-									
+
 									if (aborted()) return;
-									
+
 									if (!result.done) {
 										controller.enqueue(`${id}${STR_SUCCESS}`);
 										encode(result.value);
@@ -216,7 +216,7 @@ export function encodeSync(
 	asyncFrames: { push(frame: AsyncFrame): void },
 	counters: { refId: number; promiseId: number },
 	plugins: EncodePlugin[],
-	redactErrors: boolean,
+	redactErrors: boolean | string,
 ) {
 	let encodeStack: EncodeFrameObj[] = [
 		new EncodeFrame(
@@ -548,11 +548,18 @@ export function encodeSync(
 	}
 }
 
-function prepareErrorForEncoding(error: Error, redactErrors: boolean) {
+function prepareErrorForEncoding(error: Error, redactErrors: boolean | string) {
+	const shouldRedact =
+		redactErrors === true ||
+		typeof redactErrors === "string" ||
+		typeof redactErrors === "undefined";
+	const redacted =
+		typeof redactErrors === "string" ? redactErrors : STR_REDACTED;
+
 	return {
-		name: redactErrors ? "Error" : error.name,
-		message: redactErrors ? STR_REDACTED : error.message,
-		stack: redactErrors ? STR_REDACTED : error.stack,
+		name: shouldRedact ? "Error" : error.name,
+		message: shouldRedact ? redacted : error.message,
+		stack: shouldRedact ? undefined : error.stack,
 		cause: error.cause,
 	};
 }

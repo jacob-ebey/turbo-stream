@@ -10,8 +10,13 @@ function quickDecode<T>(
 	encodePlugins: EncodePlugin[] = [],
 	decodePlugins: DecodePlugin[] = [],
 	signal?: AbortSignal,
+	redactErrors?: boolean | string,
 ): Promise<T> {
-	const encoded = encode(value, { plugins: encodePlugins, signal });
+	const encoded = encode(value, {
+		plugins: encodePlugins,
+		redactErrors,
+		signal,
+	});
 	return decode(
 		// make sure we can process streams character by character
 		encoded.pipeThrough(
@@ -426,7 +431,21 @@ describe("decode", () => {
 		expect(decoded).toBeInstanceOf(Error);
 		expect(decoded.name).toBe("Error");
 		expect(decoded.message).toBe(STR_REDACTED);
-		expect(decoded.stack).toBe(STR_REDACTED);
+		expect(decoded.stack).toBe(undefined);
+	});
+
+	test("Error custom redaction", async () => {
+		const decoded = await quickDecode(
+			new Error("message"),
+			undefined,
+			undefined,
+			undefined,
+			"Unexpected Server Error",
+		);
+		expect(decoded).toBeInstanceOf(Error);
+		expect(decoded.name).toBe("Error");
+		expect(decoded.message).toBe("Unexpected Server Error");
+		expect(decoded.stack).toBe(undefined);
 	});
 
 	test("promise", async () => {
@@ -447,7 +466,7 @@ describe("decode", () => {
 		const error = await decodePromise.catch((error) => error);
 		expect(error.name).toBe("Error");
 		expect(error.message).toBe(STR_REDACTED);
-		expect(error.stack).toBe(STR_REDACTED);
+		expect(error.stack).toBe(undefined);
 	});
 
 	test("promise reference", async () => {

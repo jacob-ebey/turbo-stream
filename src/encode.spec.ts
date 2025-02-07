@@ -238,7 +238,7 @@ describe("encodeSync", () => {
 
 	test("error", () => {
 		expect(quickEncode(new Error("error"))).toBe(
-			'E{"name":"Error","message":"<redacted>","stack":"<redacted>","cause":u}',
+			'E{"name":"Error","message":"<redacted>","stack":u,"cause":u}',
 		);
 	});
 
@@ -691,7 +691,7 @@ describe("encode", () => {
 	test("rejected promise error", async () => {
 		const promise = Promise.reject(new Error("rejected"));
 		expect(await quickEncode(promise)).toBe(
-			'$0\n0!E{"name":"Error","message":"<redacted>","stack":"<redacted>","cause":u}\n',
+			'$0\n0!E{"name":"Error","message":"<redacted>","stack":u,"cause":u}\n',
 		);
 	});
 
@@ -733,7 +733,7 @@ describe("encode", () => {
 			},
 		};
 		expect(await quickEncode(asyncIterable)).toBe(
-			'*0\n0:1\n0:2\n0!E{"name":"Error","message":"<redacted>","stack":"<redacted>","cause":u}\n',
+			'*0\n0:1\n0:2\n0!E{"name":"Error","message":"<redacted>","stack":u,"cause":u}\n',
 		);
 	});
 
