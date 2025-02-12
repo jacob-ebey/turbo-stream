@@ -1,6 +1,20 @@
 # Turbo Stream <br> [![turbo-stream's badge](https://deno.bundlejs.com/?q=turbo-stream&badge=detailed)](https://bundlejs.com/?q=turbo-stream)
 
-A streaming data transport format that aims to support built-in features such as Promises, Dates, RegExps, Maps, Sets and more.
+Streaming data transport format that supports:
+
+- Streaming promises
+- `undefined`, `null`, `Boolean`, `String`
+- `Bigint`, `Set`, `Map`, `URL`, `RegExp`, `Error`
+- `Number`, including `+Infinity`, `-Infinity` and `NaN`, `-0`
+- Circular references, repeated references
+- `Date`, including invalid dates
+- `Symbol` (`Symbol.from()`)
+- Objects with `toJSON` methods
+- Iterables, AsyncIterable
+- `Buffer`, `ArrayBuffer`, `DataView`, TypedArrays
+- `File`, `Blob`, `FormData`, `ReadableStream`
+
+Uses `ReadableStream` as the transport interface for encoding and decoding.
 
 Decode runtime size: [![turbo-stream's badge](https://deno.bundlejs.com/badge?q=turbo-stream&badge=detailed&treeshake=%5B%7B+decode+%7D%5D)](https://bundlejs.com/?q=turbo-stream&treeshake=%5B%7B+decode+%7D%5D)
 
