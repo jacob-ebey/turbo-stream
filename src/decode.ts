@@ -116,6 +116,26 @@ export async function decode<T>(
 	stream: ReadableStream<string>,
 	{ plugins = [] }: DecodeOptions = {},
 ): Promise<T> {
+	// Merge global plugins with provided plugins
+	const allPlugins = [...plugins];
+	
+	// Lazy load global plugins to avoid circular dependencies
+	let globalPluginsLoaded = false;
+	const getGlobalPlugins = () => {
+		if (!globalPluginsLoaded) {
+			try {
+				// Use require-like pattern for dynamic import in sync context
+				const pluginRegistry = (globalThis as any).__turboStreamPluginRegistry;
+				if (pluginRegistry?.getGlobalDecodePlugins) {
+					allPlugins.push(...pluginRegistry.getGlobalDecodePlugins());
+				}
+			} catch {
+				// If plugin registry is not available, continue without global plugins
+			}
+			globalPluginsLoaded = true;
+		}
+		return allPlugins;
+	};
 	let root: Deferred<T> | null = new Deferred();
 	let references: Map<number, object> = new Map();
 	let deferredValues: Map<
@@ -174,9 +194,9 @@ export async function decode<T>(
 				}
 				case ARRAY_TYPE_PLUGIN: {
 					let pluginHandled = false;
-					let pluginsLength = plugins.length;
+					let pluginsLength = getGlobalPlugins().length;
 					for (let i = 0; i < pluginsLength; i++) {
-						let result = plugins[i](...(value as [string, ...unknown[]]));
+						let result = getGlobalPlugins()[i](...(value as [string, ...unknown[]]));
 						if (typeof result === "object" && result !== null) {
 							value = result.value;
 							pluginHandled = true;

@@ -73,6 +73,27 @@ export function encode(
 	value: unknown,
 	{ plugins = [], redactErrors = true, signal }: EncodeOptions = {},
 ) {
+	// Merge global plugins with provided plugins
+	const allPlugins = [...plugins];
+	
+	// Lazy load global plugins to avoid circular dependencies
+	let globalPluginsLoaded = false;
+	const getGlobalPlugins = () => {
+		if (!globalPluginsLoaded) {
+			try {
+				// Use require-like pattern for dynamic import in sync context
+				const pluginRegistry = (globalThis as any).__turboStreamPluginRegistry;
+				if (pluginRegistry?.getGlobalEncodePlugins) {
+					allPlugins.push(...pluginRegistry.getGlobalEncodePlugins());
+				}
+			} catch {
+				// If plugin registry is not available, continue without global plugins
+			}
+			globalPluginsLoaded = true;
+		}
+		return allPlugins;
+	};
+
 	const aborted = () => signal?.aborted ?? false;
 	const waitForAbort = new Promise<never>((_, reject) => {
 		signal?.addEventListener("abort", (reason) => {
@@ -95,7 +116,7 @@ export function encode(
 					asyncCache,
 					promises,
 					counters,
-					plugins,
+					getGlobalPlugins(),
 					redactErrors,
 				);
 
