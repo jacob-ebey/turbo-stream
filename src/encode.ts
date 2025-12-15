@@ -67,11 +67,12 @@ export type EncodeOptions = {
 	plugins?: EncodePlugin[];
 	redactErrors?: boolean | string;
 	signal?: AbortSignal;
+	bufferSynchronusChunks?: boolean;
 };
 
 export function encode(
 	value: unknown,
-	{ plugins = [], redactErrors = true, signal }: EncodeOptions = {},
+	{ plugins = [], redactErrors = true, signal, bufferSynchronusChunks = true }: EncodeOptions = {},
 ) {
 	const aborted = () => signal?.aborted ?? false;
 	const waitForAbort = new Promise<never>((_, reject) => {
@@ -88,6 +89,25 @@ export function encode(
 			let chunks: string[] = [];
 
 			let encode = (value: unknown) => {
+				if (!bufferSynchronusChunks) {
+					encodeSync(
+						value,
+						{
+							push(...chunks) {
+								controller.enqueue(chunks.join(""))
+							},
+						},
+						refCache,
+						asyncCache,
+						promises,
+						counters,
+						plugins,
+						redactErrors,
+					);
+					controller.enqueue("\n");
+					return;
+				}
+
 				encodeSync(
 					value,
 					chunks,
