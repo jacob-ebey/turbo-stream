@@ -1,7 +1,7 @@
 import { bench, boxplot, group, run, summary, do_not_optimize } from "mitata";
 
 import { decode } from "./decode.js";
-import { encode } from "./encode.js";
+import { encode, EncodeOptions } from "./encode.js";
 
 const thousandRandomNumbers = Array.from({ length: 1000 }, () => Math.random());
 
@@ -188,9 +188,9 @@ const thousandExamplePayloads = Array.from({ length: 1000 }, () =>
 	structuredClone(examplePayload),
 );
 
-async function quickEncode(value: unknown): Promise<string[]> {
+async function quickEncode(value: unknown, encodeOptions?: EncodeOptions): Promise<string[]> {
 	const chunks: string[] = [];
-	const reader = encode(value).getReader();
+	const reader = encode(value, encodeOptions).getReader();
 	try {
 		while (true) {
 			const { done, value } = await reader.read();
@@ -251,6 +251,10 @@ boxplot(() => {
 			bench("turbo full", async () => {
 				do_not_optimize(await quickDecode(examplePayload));
 			});
+
+			bench("turbo encode no buffer", async () => {
+				do_not_optimize(await quickEncode(examplePayload, { bufferSynchronusChunks: false }));
+			})
 		});
 
 		group("1000 realistic payload", () => {
