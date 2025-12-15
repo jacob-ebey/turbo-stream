@@ -1,7 +1,7 @@
 import { describe, test } from "node:test";
 import { expect } from "expect";
 
-import { encode, encodeSync, type EncodePlugin } from "./encode.js";
+import { encode, EncodeOptions, encodeSync, type EncodePlugin } from "./encode.js";
 import {
 	STR_ARRAY_BUFFER,
 	STR_BIG_INT_64_ARRAY,
@@ -336,8 +336,8 @@ describe("encodeSync", () => {
 });
 
 describe("encode", () => {
-	async function quickEncode(value: unknown, plugins: EncodePlugin[] = []) {
-		const stream = encode(value, { plugins });
+	async function quickEncode(value: unknown, plugins: EncodePlugin[] = [], options?: EncodeOptions) {
+		const stream = encode(value, { ...options, plugins });
 		const chunks: string[] = [];
 
 		const reader = stream.getReader();
@@ -479,6 +479,7 @@ describe("encode", () => {
 
 	test("object with nested object", async () => {
 		expect(await quickEncode({ a: { b: 1 } })).toBe('{"a":{"b":1}}\n');
+		expect(await quickEncode({ a: { b: 1 } }, [], { bufferSynchronusChunks: false })).toBe('{"a":{"b":1}}\n');
 	});
 
 	test("object with nested array", async () => {
