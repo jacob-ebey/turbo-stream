@@ -223,6 +223,10 @@ boxplot(() => {
 			bench("turbo full", async () => {
 				do_not_optimize(await quickDecode(thousandRandomNumbers));
 			});
+
+			bench("turbo encode no buffer", async () => {
+				do_not_optimize(await quickEncode(thousandRandomNumbers, { bufferSynchronusChunks: false }));
+			})
 		});
 
 		group("1000 random strings", () => {
@@ -237,6 +241,10 @@ boxplot(() => {
 			bench("turbo full", async () => {
 				do_not_optimize(await quickDecode(thousandRandomStrings));
 			});
+
+			bench("turbo encode no buffer", async () => {
+				do_not_optimize(await quickEncode(thousandRandomStrings, { bufferSynchronusChunks: false }));
+			})
 		});
 
 		group("realistic payload", () => {
