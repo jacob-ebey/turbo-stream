@@ -67,11 +67,53 @@ export type EncodeOptions = {
 	plugins?: EncodePlugin[];
 	redactErrors?: boolean | string;
 	signal?: AbortSignal;
+	highWaterMark?: number;
 };
+
+class ChunkBuffer {
+	private controller: ReadableStreamDefaultController<string>;
+	private chunks: string[] = [];
+	private size = 0;
+	private highWaterMark: number;
+
+	constructor(
+		controller: ReadableStreamDefaultController<string>,
+		highWaterMark: number,
+	) {
+		this.controller = controller;
+		this.highWaterMark = highWaterMark;
+	}
+
+	push(...chunks: any[]) {
+		for (let i = 0; i < chunks.length; i++) {
+			const chunk = chunks[i];
+			if (chunk == null) continue;
+			const stringified = typeof chunk === "string" ? chunk : String(chunk);
+			this.chunks.push(stringified);
+			this.size += stringified.length;
+			if (this.size >= this.highWaterMark) {
+				this.flush();
+			}
+		}
+	}
+
+	flush(suffix = "") {
+		if (this.chunks.length > 0 || suffix.length > 0) {
+			this.controller.enqueue(this.chunks.join("") + suffix);
+			this.chunks.length = 0;
+			this.size = 0;
+		}
+	}
+}
 
 export function encode(
 	value: unknown,
-	{ plugins = [], redactErrors = true, signal }: EncodeOptions = {},
+	{
+		plugins = [],
+		redactErrors = true,
+		signal,
+		highWaterMark = 16 * 1024,
+	}: EncodeOptions = {},
 ) {
 	const aborted = () => signal?.aborted ?? false;
 	const waitForAbort = new Promise<never>((_, reject) => {
@@ -85,7 +127,7 @@ export function encode(
 			let asyncCache = new WeakMap();
 			let counters = { refId: 0, promiseId: 0 };
 			let wg = new WaitGroup();
-			let chunks: string[] = [];
+			let chunks = new ChunkBuffer(controller, highWaterMark);
 
 			let encode = (value: unknown) => {
 				encodeSync(
@@ -99,15 +141,14 @@ export function encode(
 					redactErrors,
 				);
 
-				controller.enqueue(chunks.join("") + "\n");
-				chunks.length = 0;
+				chunks.flush("\n");
 			};
 
 			let handlePromiseResolved = (id: number, value: unknown) => {
 				wg.done();
 
 				if (aborted()) return;
-				controller.enqueue(`${id}${STR_SUCCESS}`);
+				chunks.push(`${id}${STR_SUCCESS}`);
 				encode(value);
 			};
 
@@ -115,7 +156,7 @@ export function encode(
 				wg.done();
 
 				if (aborted()) return;
-				controller.enqueue(`${id}${STR_FAILURE}`);
+				chunks.push(`${id}${STR_FAILURE}`);
 				encode(error);
 			};
 
@@ -143,7 +184,7 @@ export function encode(
 									if (aborted()) return;
 
 									if (!result.done) {
-										controller.enqueue(`${id}${STR_SUCCESS}`);
+										chunks.push(`${id}${STR_SUCCESS}`);
 										encode(result.value);
 									}
 								} while (!result.done);
@@ -151,11 +192,12 @@ export function encode(
 								.then(
 									() => {
 										if (aborted()) return;
-										controller.enqueue(`${id}\n`);
+										chunks.push(`${id}\n`);
+										chunks.flush();
 									},
 									(error) => {
 										if (aborted()) return;
-										controller.enqueue(`${id}${STR_FAILURE}`);
+										chunks.push(`${id}${STR_FAILURE}`);
 										encode(error);
 									},
 								)
@@ -343,34 +385,44 @@ export function encodeSync(
 			} else if (value instanceof URL) {
 				chunks.push(STR_URL, JSON.stringify(value));
 			} else if (value instanceof ArrayBuffer) {
-				chunks.push(
-					STR_ARRAY_BUFFER,
-					stringifyTypedArray(new Uint8Array(value)),
-				);
+				chunks.push(STR_ARRAY_BUFFER);
+				stringifyTypedArray(chunks, new Uint8Array(value));
 			} else if (value instanceof Int8Array) {
-				chunks.push(STR_INT_8_ARRAY, stringifyTypedArray(value));
+				chunks.push(STR_INT_8_ARRAY);
+				stringifyTypedArray(chunks, value);
 			} else if (value instanceof Uint8Array) {
-				chunks.push(STR_UINT_8_ARRAY, stringifyTypedArray(value));
+				chunks.push(STR_UINT_8_ARRAY);
+				stringifyTypedArray(chunks, value);
 			} else if (value instanceof Uint8ClampedArray) {
-				chunks.push(STR_UINT_8_ARRAY_CLAMPED, stringifyTypedArray(value));
+				chunks.push(STR_UINT_8_ARRAY_CLAMPED);
+				stringifyTypedArray(chunks, value);
 			} else if (value instanceof Int16Array) {
-				chunks.push(STR_INT_16_ARRAY, stringifyTypedArray(value));
+				chunks.push(STR_INT_16_ARRAY);
+				stringifyTypedArray(chunks, value);
 			} else if (value instanceof Uint16Array) {
-				chunks.push(STR_UINT_16_ARRAY, stringifyTypedArray(value));
+				chunks.push(STR_UINT_16_ARRAY);
+				stringifyTypedArray(chunks, value);
 			} else if (value instanceof Int32Array) {
-				chunks.push(STR_INT_32_ARRAY, stringifyTypedArray(value));
+				chunks.push(STR_INT_32_ARRAY);
+				stringifyTypedArray(chunks, value);
 			} else if (value instanceof Uint32Array) {
-				chunks.push(STR_UINT_32_ARRAY, stringifyTypedArray(value));
+				chunks.push(STR_UINT_32_ARRAY);
+				stringifyTypedArray(chunks, value);
 			} else if (value instanceof Float32Array) {
-				chunks.push(STR_FLOAT_32_ARRAY, stringifyTypedArray(value));
+				chunks.push(STR_FLOAT_32_ARRAY);
+				stringifyTypedArray(chunks, value);
 			} else if (value instanceof Float64Array) {
-				chunks.push(STR_FLOAT_64_ARRAY, stringifyTypedArray(value));
+				chunks.push(STR_FLOAT_64_ARRAY);
+				stringifyTypedArray(chunks, value);
 			} else if (value instanceof BigInt64Array) {
-				chunks.push(STR_BIG_INT_64_ARRAY, stringifyTypedArray(value));
+				chunks.push(STR_BIG_INT_64_ARRAY);
+				stringifyTypedArray(chunks, value);
 			} else if (value instanceof BigUint64Array) {
-				chunks.push(STR_BIG_UINT_64_ARRAY, stringifyTypedArray(value));
+				chunks.push(STR_BIG_UINT_64_ARRAY);
+				stringifyTypedArray(chunks, value);
 			} else if (value instanceof DataView) {
-				chunks.push(STR_DATA_VIEW, stringifyTypedArray(value));
+				chunks.push(STR_DATA_VIEW);
+				stringifyTypedArray(chunks, value);
 			} else if (value instanceof FormData) {
 				encodeStack.push(
 					new EncodeFrame(
@@ -564,11 +616,27 @@ function prepareErrorForEncoding(error: Error, redactErrors: boolean | string) {
 	};
 }
 
-function stringifyTypedArray(content: ArrayBufferView) {
+function stringifyTypedArray(
+	chunks: { push(...chunks: string[]): void },
+	content: ArrayBufferView,
+) {
 	const view = new Uint8Array(
 		content.buffer,
 		content.byteOffset,
 		content.byteLength,
 	);
-	return `"${btoa(String.fromCharCode.apply(String, view as unknown as number[]))}"`;
+	chunks.push('"');
+	const chunkSize = 65535 - (65535 % 3);
+	for (let i = 0; i < view.length; i += chunkSize) {
+		const sub = view.subarray(i, i + chunkSize);
+		let binary = "";
+		for (let j = 0; j < sub.length; j += 8192) {
+			binary += String.fromCharCode.apply(
+				null,
+				sub.subarray(j, j + 8192) as unknown as number[],
+			);
+		}
+		chunks.push(btoa(binary));
+	}
+	chunks.push('"');
 }
