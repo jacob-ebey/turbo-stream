@@ -1,5 +1,18 @@
 # Changelog
 
+## [3.2.0](https://github.com/jacob-ebey/turbo-stream/compare/v3.1.0...v3.2.0) (2026-02-26)
+
+
+### Features
+
+* handle large chunks via highWaterMark ([#82](https://github.com/jacob-ebey/turbo-stream/issues/82)) ([2f22ca8](https://github.com/jacob-ebey/turbo-stream/commit/2f22ca8f55bfc65b008a7d7534cbec9cd8f35f29))
+
+
+### Bug Fixes
+
+* handle large chunks ([2f22ca8](https://github.com/jacob-ebey/turbo-stream/commit/2f22ca8f55bfc65b008a7d7534cbec9cd8f35f29))
+* handle large chunks ([#79](https://github.com/jacob-ebey/turbo-stream/issues/79)) ([cf0f429](https://github.com/jacob-ebey/turbo-stream/commit/cf0f4299b8bed5dcc86c9efca424ab10784ab174))
+
 ## [3.1.0](https://github.com/jacob-ebey/turbo-stream/compare/v3.0.1...v3.1.0) (2025-02-07)
 
 
