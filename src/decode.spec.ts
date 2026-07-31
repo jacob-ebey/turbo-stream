@@ -106,6 +106,14 @@ describe("decode", () => {
 		expect(await quickDecode(3.14)).toBe(3.14);
 	});
 
+	test("1.469212113081042e-10", async () => {
+		expect(await quickDecode(1.469212113081042e-10)).toBe(1.469212113081042e-10);
+	});
+
+	test("1e+100", async () => {
+		expect(await quickDecode(1e+100)).toBe(1e+100);
+	});
+
 	test("bigint", async () => {
 		expect(await quickDecode(42n)).toBe(42n);
 	});
@@ -192,6 +200,14 @@ describe("decode", () => {
 		expect(decoded.a).toBe(decoded);
 	});
 
+	test("object with an exponential notation small number", async () => {
+		expect(await quickDecode({ a: 1.469212113081042e-10 })).toEqual({ a: 1.469212113081042e-10 });
+	});
+
+	test("object with an exponential notation large number", async () => {
+		expect(await quickDecode({ a: 1e100 })).toEqual({ a: 1e100 });
+	});
+
 	test("empty array", async () => {
 		expect(await quickDecode([])).toEqual([]);
 	});
@@ -210,6 +226,14 @@ describe("decode", () => {
 
 	test("array with nested object", async () => {
 		expect(await quickDecode([{ a: 1 }])).toEqual([{ a: 1 }]);
+	});
+
+	test("array with an exponential notation small number", async () => {
+		expect(await quickDecode([1.469212113081042e-10])).toEqual([1.469212113081042e-10]);
+	});
+
+	test("array with an exponential notation large number", async () => {
+		expect(await quickDecode([1e100])).toEqual([1e100]);
 	});
 
 	test("object toJSON", async () => {

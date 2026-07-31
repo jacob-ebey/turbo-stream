@@ -472,8 +472,10 @@ export async function decode<T>(
 				}
 			} else if (mode === MODE_NUMBER || mode === MODE_ASYNC) {
 				if (
+					charCode === 43 || // +
 					charCode === 45 || // -
 					charCode === 46 || // .
+					charCode === 101 || // e
 					(charCode >= 48 && charCode <= 57) // 0-9
 				) {
 					buffer += chunk[i];
