@@ -209,7 +209,16 @@ export async function decode<T>(
 			parent.push(value);
 		} else if (typeof parent === "string") {
 			stack.pop();
-			(stack[stack.length - 1] as any)[parent] = value;
+			if (parent === "__proto__") {
+				Object.defineProperty(stack[stack.length - 1] as any, parent, {
+					value,
+					writable: true,
+					enumerable: true,
+					configurable: true,
+				});
+			} else {
+				(stack[stack.length - 1] as any)[parent] = value;
+			}
 		} else if (typeof parent === "boolean") {
 			stack.pop();
 			let deferred = deferredValues.get(stack.pop() as number);
