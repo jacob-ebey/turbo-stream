@@ -192,6 +192,30 @@ describe("decode", () => {
 		expect(await quickDecode({ a: [1] })).toEqual({ a: [1] });
 	});
 
+	test("object with own enumerable __proto__ property", async () => {
+		const input = JSON.parse('{"__proto__":{"test":3.14}}') as Record<
+			string,
+			unknown
+		>;
+		expect(Object.hasOwn(input, "__proto__")).toBe(true);
+
+		const decoded = await quickDecode(input);
+		expect(Object.getPrototypeOf(decoded)).toBe(Object.prototype);
+		expect(Object.hasOwn(decoded, "__proto__")).toBe(true);
+		expect(Object.keys(decoded)).toEqual(["__proto__"]);
+		expect(decoded.__proto__).toEqual({ test: 3.14 });
+	});
+
+	test("standard __proto__ prototype is not transferred", async () => {
+		const input = { __proto__: { custom: 1 } } as Record<string, unknown>;
+		expect(Object.getPrototypeOf(input)).toEqual({ custom: 1 });
+		expect(Object.hasOwn(input, "__proto__")).toBe(false);
+
+		const decoded = await quickDecode(input);
+		expect(Object.keys(decoded)).toEqual([]);
+		expect(Object.getPrototypeOf(decoded)).toBe(Object.prototype);
+	});
+
 	test("object with circular reference", async () => {
 		const obj: Record<string, unknown> = {};
 		obj.a = obj;
