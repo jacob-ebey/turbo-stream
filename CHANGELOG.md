@@ -6,7 +6,7 @@
 ### Bug Fixes
 
 * handle __proto__ ([#87](https://github.com/jacob-ebey/turbo-stream/issues/87)) ([1360da1](https://github.com/jacob-ebey/turbo-stream/commit/1360da1a52c3b2e2683593ca8d22239b0019e37b))
-* handle exponential notation numbers ([#86](https://github.com/jacob-ebey/turbo-stream/issues/86) bad commit message) ([1360da1](https://github.com/jacob-ebey/turbo-stream/commit/1360da1a52c3b2e2683593ca8d22239b0019e37b))
+* handle exponential notation numbers ([#86](https://github.com/jacob-ebey/turbo-stream/issues/86)) ([ae283fd](https://github.com/jacob-ebey/turbo-stream/commit/ae283fddc565bbf949e4da2e3edd3520f115beb5))
 
 ## [3.2.0](https://github.com/jacob-ebey/turbo-stream/compare/v3.1.0...v3.2.0) (2026-02-26)
 
