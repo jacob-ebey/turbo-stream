@@ -49,6 +49,7 @@
 		"expect": "^29.7.0",
 		"mitata": "^1.0.33",
 		"pkg-pr-new": "^0.0.39",
+		"temporal-spec": "^1.0.1",
 		"tsm": "^2.3.0",
 		"typescript": "^5.2.2"
 	}

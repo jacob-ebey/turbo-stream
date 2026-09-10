@@ -4,6 +4,7 @@ import {
 	DeferredReadableStream,
 	TurboBlob,
 	TurboFile,
+	supportsTemporal,
 } from "./shared.js";
 export type DecodePlugin = (
 	type: string,
@@ -48,6 +49,14 @@ let SUB_MODE_FLOAT_64_ARRAY = 20 as const;
 let SUB_MODE_BIG_INT_64_ARRAY = 21 as const;
 let SUB_MODE_BIG_UINT_64_ARRAY = 22 as const;
 let SUB_MODE_DATA_VIEW = 23 as const;
+let SUB_MODE_TEMPORAL_DURATION = 24 as const;
+let SUB_MODE_TEMPORAL_INSTANT = 25 as const;
+let SUB_MODE_TEMPORAL_PLAIN_DATE = 26 as const;
+let SUB_MODE_TEMPORAL_PLAIN_DATE_TIME = 27 as const;
+let SUB_MODE_TEMPORAL_PLAIN_MONTH_DAY = 28 as const;
+let SUB_MODE_TEMPORAL_PLAIN_TIME = 29 as const;
+let SUB_MODE_TEMPORAL_PLAIN_YEAR_MONTH = 30 as const;
+let SUB_MODE_TEMPORAL_ZONED_DATE_TIME = 31 as const;
 
 type ParseSubMode =
 	| typeof SUB_MODE_UNKNOWN
@@ -73,7 +82,15 @@ type ParseSubMode =
 	| typeof SUB_MODE_FLOAT_64_ARRAY
 	| typeof SUB_MODE_BIG_INT_64_ARRAY
 	| typeof SUB_MODE_BIG_UINT_64_ARRAY
-	| typeof SUB_MODE_DATA_VIEW;
+	| typeof SUB_MODE_DATA_VIEW
+	| typeof SUB_MODE_TEMPORAL_DURATION
+	| typeof SUB_MODE_TEMPORAL_INSTANT
+	| typeof SUB_MODE_TEMPORAL_PLAIN_DATE
+	| typeof SUB_MODE_TEMPORAL_PLAIN_DATE_TIME
+	| typeof SUB_MODE_TEMPORAL_PLAIN_MONTH_DAY
+	| typeof SUB_MODE_TEMPORAL_PLAIN_TIME
+	| typeof SUB_MODE_TEMPORAL_PLAIN_YEAR_MONTH
+	| typeof SUB_MODE_TEMPORAL_ZONED_DATE_TIME;
 
 let ARRAY_TYPE_SET = 0 as const;
 let ARRAY_TYPE_MAP = 1 as const;
@@ -328,6 +345,30 @@ export async function decode<T>(
 				} else if (charCode === 68) {
 					// D
 					subMode = SUB_MODE_DATE;
+				} else if (charCode === 97) {
+					// a
+					subMode = SUB_MODE_TEMPORAL_DURATION;
+				} else if (charCode === 112) {
+					// p
+					subMode = SUB_MODE_TEMPORAL_INSTANT;
+				} else if (charCode === 100) {
+					// d
+					subMode = SUB_MODE_TEMPORAL_PLAIN_DATE;
+				} else if (charCode === 113) {
+					// q
+					subMode = SUB_MODE_TEMPORAL_PLAIN_DATE_TIME;
+				} else if (charCode === 109) {
+					// m
+					subMode = SUB_MODE_TEMPORAL_PLAIN_MONTH_DAY;
+				} else if (charCode === 84) {
+					// T
+					subMode = SUB_MODE_TEMPORAL_PLAIN_TIME;
+				} else if (charCode === 121) {
+					// y
+					subMode = SUB_MODE_TEMPORAL_PLAIN_YEAR_MONTH;
+				} else if (charCode === 90) {
+					// Z
+					subMode = SUB_MODE_TEMPORAL_ZONED_DATE_TIME;
 				} else if (charCode === 85) {
 					// U
 					subMode = SUB_MODE_URL;
@@ -573,6 +614,32 @@ export async function decode<T>(
 						if (subMode === SUB_MODE_DATE) {
 							value = new Date(value);
 							references.set(references.size, value);
+						} else if (subMode === SUB_MODE_TEMPORAL_DURATION) {
+							value = temporal().Duration.from(value);
+							references.set(references.size, value);
+						} else if (subMode === SUB_MODE_TEMPORAL_INSTANT) {
+							value = temporal().Instant.from(value);
+							references.set(references.size, value);
+						} else if (subMode === SUB_MODE_TEMPORAL_PLAIN_DATE) {
+							value = temporal().PlainDate.from(value);
+							references.set(references.size, value);
+						} else if (subMode === SUB_MODE_TEMPORAL_PLAIN_DATE_TIME) {
+							value = temporal().PlainDateTime.from(value);
+							references.set(references.size, value);
+						} else if (subMode === SUB_MODE_TEMPORAL_PLAIN_MONTH_DAY) {
+							value = temporal().PlainMonthDay.from(value);
+							references.set(references.size, value);
+						} else if (subMode === SUB_MODE_TEMPORAL_PLAIN_TIME) {
+							value = temporal().PlainTime.from(value);
+							references.set(references.size, value);
+						} else if (subMode === SUB_MODE_TEMPORAL_PLAIN_YEAR_MONTH) {
+							value = temporal().PlainYearMonth.from(value);
+							references.set(references.size, value);
+						} else if (subMode === SUB_MODE_TEMPORAL_ZONED_DATE_TIME) {
+							value = temporal().ZonedDateTime.from(value, {
+								offset: "use",
+							});
+							references.set(references.size, value);
 						} else if (subMode === SUB_MODE_SYMBOL) {
 							value = Symbol.for(value);
 						} else if (subMode === SUB_MODE_URL) {
@@ -667,6 +734,13 @@ export async function decode<T>(
 		});
 
 	return root.promise;
+}
+
+function temporal(): typeof Temporal {
+	if (!supportsTemporal()) {
+		throw new SyntaxError("Temporal is not supported in this runtime");
+	}
+	return Temporal;
 }
 
 function decodeTypedArray(base64: string) {

@@ -8,6 +8,7 @@ Streaming data transport format that supports:
 - `Number`, including `+Infinity`, `-Infinity` and `NaN`, `-0`
 - Circular references, repeated references
 - `Date`, including invalid dates
+- `Temporal` objects
 - `Symbol` (`Symbol.from()`)
 - Objects with `toJSON` methods
 - Iterables, AsyncIterable

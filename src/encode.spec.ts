@@ -21,12 +21,21 @@ import {
 	STR_NEGATIVE_INFINITY,
 	STR_NEGATIVE_ZERO,
 	STR_REGEXP,
+	STR_TEMPORAL_DURATION,
+	STR_TEMPORAL_INSTANT,
+	STR_TEMPORAL_PLAIN_DATE,
+	STR_TEMPORAL_PLAIN_DATE_TIME,
+	STR_TEMPORAL_PLAIN_MONTH_DAY,
+	STR_TEMPORAL_PLAIN_TIME,
+	STR_TEMPORAL_PLAIN_YEAR_MONTH,
+	STR_TEMPORAL_ZONED_DATE_TIME,
 	STR_UINT_16_ARRAY,
 	STR_UINT_32_ARRAY,
 	STR_UINT_8_ARRAY,
 	STR_UINT_8_ARRAY_CLAMPED,
 	STR_URL,
 	SUPPORTS_FILE,
+	supportsTemporal,
 } from "./shared.js";
 
 describe("encodeSync", () => {
@@ -141,6 +150,79 @@ describe("encodeSync", () => {
 		expect(quickEncode(input)).toBe(`${STR_DATE}""`);
 	});
 
+	test("Temporal Duration", { skip: !supportsTemporal() }, () => {
+		const duration = Temporal.Duration.from("PT1H30M");
+		expect(quickEncode(duration)).toBe(`${STR_TEMPORAL_DURATION}"PT1H30M"`);
+	});
+
+	test(
+		"Temporal Duration with sub-second units",
+		{ skip: !supportsTemporal() },
+		() => {
+			const cases: [Temporal.DurationLike, string][] = [
+				[{ hours: 1, milliseconds: 2 }, "PT1H0.002S"],
+				[{ days: 1, nanoseconds: 1 }, "P1DT0.000000001S"],
+				[{ hours: 1, milliseconds: 1500 }, "PT1H1.5S"],
+				[{ hours: 1, milliseconds: 1000 }, "PT1H1S"],
+				[{ minutes: -5, microseconds: -7 }, "-PT5M0.000007S"],
+			];
+			for (const [fields, expected] of cases) {
+				expect(quickEncode(Temporal.Duration.from(fields))).toBe(
+					`${STR_TEMPORAL_DURATION}"${expected}"`,
+				);
+			}
+		},
+	);
+
+	test("Temporal Instant", { skip: !supportsTemporal() }, () => {
+		const instant = Temporal.Instant.from("2021-03-12T00+08:00");
+		expect(quickEncode(instant)).toBe(
+			`${STR_TEMPORAL_INSTANT}"2021-03-11T16:00:00Z"`,
+		);
+	});
+
+	test("Temporal PlainDate", { skip: !supportsTemporal() }, () => {
+		const plainDate = Temporal.PlainDate.from("2021-07-01");
+		expect(quickEncode(plainDate)).toBe(
+			`${STR_TEMPORAL_PLAIN_DATE}"2021-07-01"`,
+		);
+	});
+
+	test("Temporal PlainDateTime", { skip: !supportsTemporal() }, () => {
+		const plainDateTime = Temporal.PlainDateTime.from("2021-07-01T12:34:56");
+		expect(quickEncode(plainDateTime)).toBe(
+			`${STR_TEMPORAL_PLAIN_DATE_TIME}"2021-07-01T12:34:56"`,
+		);
+	});
+
+	test("Temporal PlainMonthDay", { skip: !supportsTemporal() }, () => {
+		const plainMonthDay = Temporal.PlainMonthDay.from("05-02");
+		expect(quickEncode(plainMonthDay)).toBe(
+			`${STR_TEMPORAL_PLAIN_MONTH_DAY}"05-02"`,
+		);
+	});
+
+	test("Temporal PlainTime", { skip: !supportsTemporal() }, () => {
+		const plainTime = Temporal.PlainTime.from("12:34:56");
+		expect(quickEncode(plainTime)).toBe(`${STR_TEMPORAL_PLAIN_TIME}"12:34:56"`);
+	});
+
+	test("Temporal PlainYearMonth", { skip: !supportsTemporal() }, () => {
+		const plainYearMonth = Temporal.PlainYearMonth.from("2021-05");
+		expect(quickEncode(plainYearMonth)).toBe(
+			`${STR_TEMPORAL_PLAIN_YEAR_MONTH}"2021-05"`,
+		);
+	});
+
+	test("Temporal ZonedDateTime", { skip: !supportsTemporal() }, () => {
+		const zonedDateTime = Temporal.ZonedDateTime.from(
+			"2021-07-01T12:34:56-04:00[America/New_York]",
+		);
+		expect(quickEncode(zonedDateTime)).toBe(
+			`${STR_TEMPORAL_ZONED_DATE_TIME}"2021-07-01T12:34:56-04:00[America/New_York]"`,
+		);
+	});
+
 	test("empty object", () => {
 		expect(quickEncode({})).toBe("{}");
 	});
@@ -204,6 +286,30 @@ describe("encodeSync", () => {
 			},
 		};
 		expect(quickEncode([obj, obj])).toBe("[42,42]");
+	});
+
+	test("object toJSON primitive does not shift later references", () => {
+		const obj = {
+			toJSON() {
+				return 42;
+			},
+		};
+		const url = new URL("https://example.com");
+		expect(quickEncode({ a: obj, b: url, c: url })).toBe(
+			`{"a":42,"b":${STR_URL}"https://example.com/","c":@1}`,
+		);
+	});
+
+	test("object toJSON null is not aliased to a later reference", () => {
+		const obj = {
+			toJSON() {
+				return null;
+			},
+		};
+		const url = new URL("https://example.com");
+		expect(quickEncode({ a: obj, b: url, c: obj, d: url })).toBe(
+			`{"a":null,"b":${STR_URL}"https://example.com/","c":null,"d":@1}`,
+		);
 	});
 
 	test("object toJSON reference", () => {
@@ -453,6 +559,154 @@ describe("encode", () => {
 		);
 	});
 
+	test("Temporal Duration", { skip: !supportsTemporal() }, async () => {
+		const duration = Temporal.Duration.from("PT1H30M");
+		expect(await quickEncode(duration)).toBe(
+			`${STR_TEMPORAL_DURATION}"PT1H30M"\n`,
+		);
+	});
+
+	test(
+		"Temporal Duration reference",
+		{ skip: !supportsTemporal() },
+		async () => {
+			const duration = Temporal.Duration.from("PT1H30M");
+			expect(await quickEncode([duration, duration])).toBe(
+				`[${STR_TEMPORAL_DURATION}"PT1H30M",@1]\n`,
+			);
+		},
+	);
+
+	test("Temporal Instant", { skip: !supportsTemporal() }, async () => {
+		const instant = Temporal.Instant.from("2021-03-12T00+08:00");
+		expect(await quickEncode(instant)).toBe(
+			`${STR_TEMPORAL_INSTANT}"2021-03-11T16:00:00Z"\n`,
+		);
+	});
+
+	test(
+		"Temporal Instant reference",
+		{ skip: !supportsTemporal() },
+		async () => {
+			const instant = Temporal.Instant.from("2021-03-12T00+08:00");
+			expect(await quickEncode([instant, instant])).toBe(
+				`[${STR_TEMPORAL_INSTANT}"2021-03-11T16:00:00Z",@1]\n`,
+			);
+		},
+	);
+
+	test("Temporal PlainDate", { skip: !supportsTemporal() }, async () => {
+		const plainDate = Temporal.PlainDate.from("2021-07-01");
+		expect(await quickEncode(plainDate)).toBe(
+			`${STR_TEMPORAL_PLAIN_DATE}"2021-07-01"\n`,
+		);
+	});
+
+	test(
+		"Temporal PlainDate reference",
+		{ skip: !supportsTemporal() },
+		async () => {
+			const plainDate = Temporal.PlainDate.from("2021-07-01");
+			expect(await quickEncode([plainDate, plainDate])).toBe(
+				`[${STR_TEMPORAL_PLAIN_DATE}"2021-07-01",@1]\n`,
+			);
+		},
+	);
+
+	test("Temporal PlainDateTime", { skip: !supportsTemporal() }, async () => {
+		const plainDateTime = Temporal.PlainDateTime.from("2021-07-01T12:34:56");
+		expect(await quickEncode(plainDateTime)).toBe(
+			`${STR_TEMPORAL_PLAIN_DATE_TIME}"2021-07-01T12:34:56"\n`,
+		);
+	});
+
+	test(
+		"Temporal PlainDateTime reference",
+		{ skip: !supportsTemporal() },
+		async () => {
+			const plainDateTime = Temporal.PlainDateTime.from("2021-07-01T12:34:56");
+			expect(await quickEncode([plainDateTime, plainDateTime])).toBe(
+				`[${STR_TEMPORAL_PLAIN_DATE_TIME}"2021-07-01T12:34:56",@1]\n`,
+			);
+		},
+	);
+
+	test("Temporal PlainMonthDay", { skip: !supportsTemporal() }, async () => {
+		const plainMonthDay = Temporal.PlainMonthDay.from("05-02");
+		expect(await quickEncode(plainMonthDay)).toBe(
+			`${STR_TEMPORAL_PLAIN_MONTH_DAY}"05-02"\n`,
+		);
+	});
+
+	test(
+		"Temporal PlainMonthDay reference",
+		{ skip: !supportsTemporal() },
+		async () => {
+			const plainMonthDay = Temporal.PlainMonthDay.from("05-02");
+			expect(await quickEncode([plainMonthDay, plainMonthDay])).toBe(
+				`[${STR_TEMPORAL_PLAIN_MONTH_DAY}"05-02",@1]\n`,
+			);
+		},
+	);
+
+	test("Temporal PlainTime", { skip: !supportsTemporal() }, async () => {
+		const plainTime = Temporal.PlainTime.from("12:34:56");
+		expect(await quickEncode(plainTime)).toBe(
+			`${STR_TEMPORAL_PLAIN_TIME}"12:34:56"\n`,
+		);
+	});
+
+	test(
+		"Temporal PlainTime reference",
+		{ skip: !supportsTemporal() },
+		async () => {
+			const plainTime = Temporal.PlainTime.from("12:34:56");
+			expect(await quickEncode([plainTime, plainTime])).toBe(
+				`[${STR_TEMPORAL_PLAIN_TIME}"12:34:56",@1]\n`,
+			);
+		},
+	);
+
+	test("Temporal PlainYearMonth", { skip: !supportsTemporal() }, async () => {
+		const plainYearMonth = Temporal.PlainYearMonth.from("2021-05");
+		expect(await quickEncode(plainYearMonth)).toBe(
+			`${STR_TEMPORAL_PLAIN_YEAR_MONTH}"2021-05"\n`,
+		);
+	});
+
+	test(
+		"Temporal PlainYearMonth reference",
+		{ skip: !supportsTemporal() },
+		async () => {
+			const plainYearMonth = Temporal.PlainYearMonth.from("2021-05");
+			expect(await quickEncode([plainYearMonth, plainYearMonth])).toBe(
+				`[${STR_TEMPORAL_PLAIN_YEAR_MONTH}"2021-05",@1]\n`,
+			);
+		},
+	);
+
+	test("Temporal ZonedDateTime", { skip: !supportsTemporal() }, async () => {
+		const zonedDateTime = Temporal.ZonedDateTime.from(
+			"2021-07-01T12:34:56-04:00[America/New_York]",
+		);
+		expect(await quickEncode(zonedDateTime)).toBe(
+			`${STR_TEMPORAL_ZONED_DATE_TIME}"2021-07-01T12:34:56-04:00[America/New_York]"\n`,
+		);
+	});
+
+	test(
+		"Temporal ZonedDateTime reference",
+		{ skip: !supportsTemporal() },
+		async () => {
+			const zonedDateTime = Temporal.ZonedDateTime.from(
+				"2021-07-01T12:34:56-04:00[America/New_York]",
+			);
+			expect(await quickEncode([zonedDateTime, zonedDateTime])).toBe(
+				`[${STR_TEMPORAL_ZONED_DATE_TIME}"2021-07-01T12:34:56-04:00[America/New_York]",@1]\n`,
+			);
+		},
+	);
+
 	test("URL", async () => {
 		const url = new URL("https://example.com");
 		expect(await quickEncode(url)).toBe(`${STR_URL}"https://example.com/"\n`);
@@ -579,6 +833,24 @@ describe("encode", () => {
 		];
 		expect(await quickEncode(values)).toBe(
 			`[u,null,true,false,NaN,I,i,z,0,42,-42,3.14,-3.14,b42,{},[\"1\",2,\"3\",s\"daSymbol\",D\"2021-01-01T00:00:00.000Z\",U\"https://example.com/\"]]\n`,
+		);
+	});
+
+	test("array of Temporal values", { skip: !supportsTemporal() }, async () => {
+		const values = [
+			Temporal.Duration.from("PT1H30M"),
+			Temporal.Instant.from("2021-03-12T00+08:00"),
+			Temporal.PlainDate.from("2021-07-01"),
+			Temporal.PlainDateTime.from("2021-07-01T12:34:56"),
+			Temporal.PlainMonthDay.from("05-02"),
+			Temporal.PlainTime.from("12:34:56"),
+			Temporal.PlainYearMonth.from("2021-05"),
+			Temporal.ZonedDateTime.from(
+				"2021-07-01T12:34:56-04:00[America/New_York]",
+			),
+		];
+		expect(await quickEncode(values)).toBe(
+			`[a\"PT1H30M\",p\"2021-03-11T16:00:00Z\",d\"2021-07-01\",q\"2021-07-01T12:34:56\",m\"05-02\",T\"12:34:56\",y\"2021-05\",Z\"2021-07-01T12:34:56-04:00[America/New_York]\"]\n`,
 		);
 	});
 

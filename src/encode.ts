@@ -1,9 +1,9 @@
 import {
 	STR_ARRAY_BUFFER,
 	STR_ASYNC_ITERABLE,
+	STR_BIGINT,
 	STR_BIG_INT_64_ARRAY,
 	STR_BIG_UINT_64_ARRAY,
-	STR_BIGINT,
 	STR_BLOB,
 	STR_DATA_VIEW,
 	STR_DATE,
@@ -15,14 +15,14 @@ import {
 	STR_FLOAT_64_ARRAY,
 	STR_FORM_DATA,
 	STR_INFINITY,
+	STR_INT_8_ARRAY,
 	STR_INT_16_ARRAY,
 	STR_INT_32_ARRAY,
-	STR_INT_8_ARRAY,
 	STR_MAP,
-	STR_NaN,
 	STR_NEGATIVE_INFINITY,
 	STR_NEGATIVE_ZERO,
 	STR_NULL,
+	STR_NaN,
 	STR_PLUGIN,
 	STR_PROMISE,
 	STR_READABLE_STREAM,
@@ -32,15 +32,24 @@ import {
 	STR_SET,
 	STR_SUCCESS,
 	STR_SYMBOL,
+	STR_TEMPORAL_DURATION,
+	STR_TEMPORAL_INSTANT,
+	STR_TEMPORAL_PLAIN_DATE,
+	STR_TEMPORAL_PLAIN_DATE_TIME,
+	STR_TEMPORAL_PLAIN_MONTH_DAY,
+	STR_TEMPORAL_PLAIN_TIME,
+	STR_TEMPORAL_PLAIN_YEAR_MONTH,
+	STR_TEMPORAL_ZONED_DATE_TIME,
 	STR_TRUE,
-	STR_UINT_16_ARRAY,
-	STR_UINT_32_ARRAY,
 	STR_UINT_8_ARRAY,
 	STR_UINT_8_ARRAY_CLAMPED,
+	STR_UINT_16_ARRAY,
+	STR_UINT_32_ARRAY,
 	STR_UNDEFINED,
 	STR_URL,
 	SUPPORTS_FILE,
 	WaitGroup,
+	supportsTemporal,
 } from "./shared.js";
 let { NEGATIVE_INFINITY, POSITIVE_INFINITY, isNaN: nan } = Number;
 
@@ -378,6 +387,10 @@ export function encodeSync(
 				refs.set(value, counters.refId++);
 			}
 
+			if (supportsTemporal() && stringifyTemporal(chunks, value)) {
+				continue;
+			}
+
 			if (value instanceof Date) {
 				chunks.push(STR_DATE, '"', value.toJSON(), '"');
 			} else if (value instanceof RegExp) {
@@ -466,9 +479,8 @@ export function encodeSync(
 						newValue,
 					) as EncodeFrameObj,
 				);
-				if (typeof newValue === "object") {
-					counters.refId--;
-				} else {
+				counters.refId--;
+				if (newValue === null || typeof newValue !== "object") {
 					refs.delete(value);
 				}
 			} else {
@@ -598,6 +610,54 @@ export function encodeSync(
 			chunks.push(STR_UNDEFINED);
 		}
 	}
+}
+
+function stringifyTemporal(
+	chunks: { push(...chunks: string[]): void },
+	value: object,
+): boolean {
+	if (value instanceof Temporal.Duration) {
+		chunks.push(STR_TEMPORAL_DURATION, '"', stringifyDuration(value), '"');
+		return true;
+	}
+
+	let tag: string;
+	if (value instanceof Temporal.Instant) {
+		tag = STR_TEMPORAL_INSTANT;
+	} else if (value instanceof Temporal.PlainDate) {
+		tag = STR_TEMPORAL_PLAIN_DATE;
+	} else if (value instanceof Temporal.PlainDateTime) {
+		tag = STR_TEMPORAL_PLAIN_DATE_TIME;
+	} else if (value instanceof Temporal.PlainMonthDay) {
+		tag = STR_TEMPORAL_PLAIN_MONTH_DAY;
+	} else if (value instanceof Temporal.PlainTime) {
+		tag = STR_TEMPORAL_PLAIN_TIME;
+	} else if (value instanceof Temporal.PlainYearMonth) {
+		tag = STR_TEMPORAL_PLAIN_YEAR_MONTH;
+	} else if (value instanceof Temporal.ZonedDateTime) {
+		tag = STR_TEMPORAL_ZONED_DATE_TIME;
+	} else {
+		return false;
+	}
+	chunks.push(tag, '"', value.toJSON(), '"');
+	return true;
+}
+
+const DURATION_ZERO_PADDING = /\.?0+S$/;
+
+// V8 drops the sub-seconds part when the whole seconds are zero and a larger
+// unit exists, for example `PT1H0.002S` serializes as `PT1H`.
+function stringifyDuration(value: Temporal.Duration): string {
+	const hasSubSeconds =
+		value.milliseconds || value.microseconds || value.nanoseconds;
+
+	if (!hasSubSeconds) {
+		return value.toJSON();
+	}
+
+	return value
+		.toString({ fractionalSecondDigits: 9 })
+		.replace(DURATION_ZERO_PADDING, "S");
 }
 
 function prepareErrorForEncoding(error: Error, redactErrors: boolean | string) {
