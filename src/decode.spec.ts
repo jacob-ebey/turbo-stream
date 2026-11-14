@@ -11,6 +11,7 @@ function quickDecode<T>(
 	decodePlugins: DecodePlugin[] = [],
 	signal?: AbortSignal,
 	redactErrors?: boolean | string,
+	onPromise?: (promise: Promise<unknown>) => void,
 ): Promise<T> {
 	const encoded = encode(value, {
 		plugins: encodePlugins,
@@ -30,6 +31,7 @@ function quickDecode<T>(
 		),
 		{
 			plugins: decodePlugins,
+			onPromise,
 		},
 	);
 }
@@ -542,6 +544,42 @@ describe("decode", () => {
 		deferred.resolve();
 
 		await expect(decoded.promise).rejects.toThrowError("Aborted");
+	});
+
+	test("promise is passed to onPromise", async () => {
+		const promises: unknown[] = [];
+		const decoded = await quickDecode(
+			{ promise: Promise.resolve({ nested: Promise.resolve(42) }) },
+			undefined,
+			undefined,
+			undefined,
+			undefined,
+			(promise) => promises.push(promise),
+		);
+		const value = await decoded.promise;
+		expect(promises).toEqual([decoded.promise, value.nested]);
+		expect(await value.nested).toBe(42);
+	});
+
+	test("promise rejection can be handled by onPromise", async () => {
+		const unhandled: unknown[] = [];
+		const onUnhandledRejection = (reason: unknown) => unhandled.push(reason);
+		process.on("unhandledRejection", onUnhandledRejection);
+		try {
+			const decoded = await quickDecode(
+				{ promise: Promise.reject(42) },
+				undefined,
+				undefined,
+				undefined,
+				undefined,
+				(promise) => promise.catch(() => {}),
+			);
+			await new Promise((resolve) => setTimeout(resolve, 10));
+			expect(unhandled).toEqual([]);
+			await expect(decoded.promise).rejects.toBe(42);
+		} finally {
+			process.off("unhandledRejection", onUnhandledRejection);
+		}
 	});
 
 	test("async iterable", async () => {

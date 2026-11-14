@@ -12,6 +12,7 @@ export type DecodePlugin = (
 
 export type DecodeOptions = {
 	plugins?: DecodePlugin[];
+	onPromise?: (promise: Promise<unknown>) => void;
 };
 
 let MODE_UNKNOWN = 0 as const;
@@ -114,7 +115,7 @@ type ReleaseType =
 
 export async function decode<T>(
 	stream: ReadableStream<string>,
-	{ plugins = [] }: DecodeOptions = {},
+	{ plugins = [], onPromise }: DecodeOptions = {},
 ): Promise<T> {
 	let root: Deferred<T> | null = new Deferred();
 	let references: Map<number, object> = new Map();
@@ -504,6 +505,7 @@ export async function decode<T>(
 							releaseValue(existing.promise, 0);
 						} else {
 							let deferred = new Deferred();
+							onPromise?.(deferred.promise);
 							deferredValues.set(id, deferred);
 							releaseValue(deferred.promise, 0);
 						}
